@@ -8,12 +8,15 @@
  * 2017 02 03
  *      changed status bits definition
  *      changed followUpTask definition: structure contains pointer to an external defined array, saves some memory
+ * 2017 02 05
+ *      changed function addFollowUpTask, fixed error
  */
 
 #ifndef TASK_H_
 #define TASK_H_
 
-#include <RSOSDefines.h>
+#include "Path.h"
+#include PATH_RSOSDEFINES_H
 
 /**
  * type definition of the function executed when task is scheduled

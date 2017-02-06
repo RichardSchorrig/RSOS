@@ -6,7 +6,6 @@
  */
 
 #include "Stepper.h"
-#include "Task.h"
 
 #ifdef STEPPER_SHIFTREGISTER
 #endif /* STEPPER_SHIFTREGISTER */

@@ -24,10 +24,12 @@
  */
 #define STEPPER_MAXSTEPS 160
 
+#include "../Path.h"
 #include <msp430.h>
 
-#include "defines.h"
-#include "Task.h"
+
+#include PATH_RSOSDEFINES_H
+#include "../Task.h"
 #include "ShiftRegisterOperation.h"
 
 typedef struct stepper_pins_t{

@@ -3,13 +3,20 @@
  *
  *  Created on: 09.03.2015
  *      Author: Richard
+ *
+ * Changelog:
+ * 2017 02 05
+ *      added function continueTimer(WaitTimer*), not tested
  */
 
 #ifndef TIME_H_
 #define TIME_H_
 
 #include "Task.h"
-#include "RSOSDefines.h"
+#include "Path.h"
+#include PATH_RSOSDEFINES_H
+
+#include <stdint.h>
 
 struct WaitTimer_t;
 
@@ -18,27 +25,31 @@ struct WaitTimer_t;
  * Fields:
  *  currentWaitTime: the wait time the timer is currently in, decrements per cycle
  *  status: bit field which holds:
- *      ACSEWWWWWWWWBxxx
+ *      ACEE WWWW WWWW WWWW
  *      A: is active
  *      C: is cyclic
- *      S: Task on start
- *      E: Task on stop
- *      WWWWWWWW: wait time (0..254)
- *      B: button connected
- *      xxx: number of the connected button (0..7)  //todo: 0000 no button 0001: button 0, 1111 button 14
+ *      EE: exponent to wait time (0..4) wait time value is shifted by exponent
+ *          possible combinations:
+ *              00: shift by 0
+ *              01: shift by 2
+ *              10: shift by 4
+ *              11: reserved
+ *      W...: wait time (0..4095)
  *  taskOnStart: a task that is scheduled when its WaitTimer is set active
  *  taskOnStop: a task that is scheduled when its WaitTimer is stopped
+ *  connectedButton: a button connected to this timer, to debounce button
  *
  * MEMORY:
- *  this structure takes up 7 Bytes
+ *  this structure takes up 6 Bytes
  *
  * todo: extra field button, extent wait time to 11 Bits (0..2040)
  */
 typedef struct WaitTimer_t{
-	volatile unsigned char currentWaitTime;
-	volatile unsigned int status;
-	Task* taskOnStart;
-	Task* taskOnStop;
+	volatile uint16_t status;
+	volatile uint16_t currentWaitTime;
+	uint8_t taskOnStart;
+	uint8_t taskOnStop;
+//	Button* connectedButton;
 } WaitTimer;
 
 extern char timers_size;
@@ -92,6 +103,13 @@ void setTimer(WaitTimer* waitTimer);
  * @param waitTimer: the timer to stop
  */
 void haltTimer(WaitTimer* waitTimer);
+
+/**
+ * continues the specified timer. the task on start is not scheduled,
+ * and the timer is not reset. It continues to run where it was halted.
+ * @param waitTimer: the timer to continue
+ */
+void continueTimer(WaitTimer* waitTimer);
 
 /**
  * adds a button to the specified timer. this is called automatically if a Button is initialized.

@@ -94,7 +94,7 @@ void addFollowUpTask(Task* task, Task* *followUpArray, Task* followUpTask)
 	{
 	    if (numberOfFollowUps == 0)
 	    {
-	        if (task->followUpTask == 0) {
+	        if (followUpArray == 0) {
 	            return; //error
 	        }
 	        else {

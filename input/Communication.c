@@ -6,9 +6,10 @@
  */
 
 #include "Communication.h"
-
+#include "../Path.h"
 #include <msp430.h>
-#include "RSOSDefines.h"
+
+#include PATH_RSOSDEFINES_H
 
 /**
  * inits the USCI_B module to be configured as master

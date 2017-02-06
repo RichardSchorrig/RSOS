@@ -5,8 +5,8 @@
  *      Author: Richard
  */
 
-#ifndef COMMUNICATIONS_H_
-#define COMMUNICATIONS_H_
+#ifndef COMMUNICATION_H_
+#define COMMUNICATION_H_
 
 void initUSCI_A_SPI_MASTER();
 void initUSCI_B_SPI_MASTER();
@@ -20,4 +20,4 @@ void resetBuffer();
 
 
 
-#endif /* COMMUNICATIONS_H_ */
+#endif /* COMMUNICATION_H_ */

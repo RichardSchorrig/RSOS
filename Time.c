@@ -47,7 +47,8 @@ void addButtonToTimer(WaitTimer* waitTimer, unsigned char buttonNr)
 
 void setTimer(WaitTimer* waitTimer)
 {
-	if (waitTimer->status & taskIsOnStart)
+//	if (waitTimer->status & taskIsOnStart)
+    if (waitTimer->taskOnStart != 0)
 	{
 		scheduleTask(waitTimer->taskOnStart);
 	}
@@ -58,6 +59,11 @@ void setTimer(WaitTimer* waitTimer)
 void haltTimer(WaitTimer* waitTimer)
 {
 	waitTimer->status &= ~isActive;
+}
+
+void continueTimer(WaitTimer* waitTimer)
+{
+    waitTimer->status |= isActive;
 }
 
 void setTaskOnStart(WaitTimer* waitTimer, Task* task)
@@ -98,9 +104,11 @@ inline void waitScheduler()
 			}
 			else
 			{
-				if (wT->status & buttonConnected)
+//				if (wT->status & buttonConnected)
+			    if (wT->connectedButton != 0)
 				{
 					signed char btn = (wT->status & connectedButtonMask);
+					/*
 					if (buttons_mem[btn].port == 1)				//checks if buttons still pressed & enables interrupt only on release
 					{
 						if (P1IN & buttons_mem[btn].bit)
@@ -139,10 +147,28 @@ inline void waitScheduler()
 							wT->status |= isActive;
 						}
 					}
+					*/
+					if (*(wT->connectedButton->port) & wT->connectedButton->bit) {
+//					if (*buttons_mem[btn].port & buttons_mem[btn].bit) {
+					    if (wT->currentWaitTime == 255)
+                            setTimer(wT);
+                        else
+                        {
+                            enableBtnInterrupt(&buttons_mem[wT->status & connectedButtonMask]);
+                            scheduleTask(wT->taskOnStop);
+                            wT->status &= ~isActive;
+                        }
+					}
+                    else
+                    {
+                        wT->currentWaitTime = 255;
+                        wT->status |= isActive;
+                    }
 				}
 				else
 				{
-					if (wT->status & taskIsOnEnd && wT->currentWaitTime == 0)
+//					if (wT->status & taskIsOnEnd && wT->currentWaitTime == 0)
+				    if (wT->taskOnStop != 0)
 					{
 						scheduleTask(wT->taskOnStop);
 					}

@@ -3,34 +3,66 @@
  *
  *  Created on: 20.09.2016
  *      Author: Richard
+ *
+ *  Changelog:
+ *  2017.020.05: changed SR_activateShiftRegister, added support for different Transfer and Receive Buffer Registers (to be tested)
  */
 
 #ifndef SHIFTREGISTEROPERATION_H_
 #define SHIFTREGISTEROPERATION_H_
 
+#include "../Path.h"
 #include <msp430.h>
 #include <stdint.h>
-#include "defines.h"
-#include "Task.h"
+#include "../Task.h"
 
+#include PATH_RSOSDEFINES_H
+
+typedef struct ShiftRegisterStrobe_t {
+    uint8_t pin;
+    volatile uint8_t * port;
+} ShiftRegisterStrobe;
+
+/**
+ * Shift Register Operation structure
+ *  Fields:
+ *      buffer: a pointer to a buffer array
+ *      bufferLength: the length of the buffer
+ *      bytesReceived: the number of bytes received while this SR is active, is reset to 0 when activated
+ *      bytesToProcess: the number of bytes left to be written, is set when activated
+ *      strobePin: todo!
+ *
+ *  MEMORY:
+ *      this structure takes up 8 bytes
+ */
 typedef struct ShiftRegisterOperation_t {
 	uint8_t * buffer;
 	uint8_t bufferLength;
 	uint8_t bytesReceived;
 	uint8_t bytesToProcess;
-	uint8_t strobePin;	// - todo: rename status; bit field with information of strobe pin and sequence of strobe pin (select pin or strobe on end of transfer)
+//	uint8_t strobePin;	// - todo: rename status; bit field with information of strobe pin and sequence of strobe pin (select pin or strobe on end of transfer)
+	ShiftRegisterStrobe strobePin;
 } ShiftRegisterOperation;
 
 extern ShiftRegisterOperation shiftRegisterOperation_mem[MAXSHIFTREGISTER];
 extern int8_t shiftRegisterOperation_size;
 
+/**
+ * set the address to write to, i.e. the interface transfer buffer register the shift register is connected to.
+ * MSP Devices: something like UCA0TXBUF
+ */
 void SR_initWriteAddress(volatile unsigned char * address);
+
+/**
+ * set the address to read from, i.e. the interface receive buffer register the shift register is connected to.
+ * MSP Devices: something like UCA0RXBUF
+ */
 void SR_initReadAddress(volatile unsigned char * address);
 
 /**
  * initialize the Shift Register Operation with the read and write address
  * of the SPI interface
- * also uses a task with prio 2
+ * Needs a total of 2 Tasks to operate, consider 2 extra task in RSOSDefines.h
  * @param writeAddress: the address bytes are written into the interface
  * @param readAddress: the address to read from the interface
  */
@@ -41,6 +73,7 @@ void SR_initOperation(volatile unsigned char * writeAddress, volatile unsigned c
  * @param strobePin: a number indicating the pin for the strobe input
  * of the shift register
  * @param buffer: the buffer memory pointer to be used
+ * @param bufferLength: the maximum length of the buffer
  * @return: the initialized structure pointer
  */
 ShiftRegisterOperation* SR_initShiftRegister(uint8_t strobePin, uint8_t * buffer, uint8_t bufferLength);
@@ -49,9 +82,6 @@ ShiftRegisterOperation* SR_initShiftRegister(uint8_t strobePin, uint8_t * buffer
  * interrupt service routine call
  * writes the next byte of the active shift register into the address specified
  * by the init function @see SR_initWriteReadAddress
- * @param strobePin: todo
- * @param buffer: the buffer to which data is written / from where data is read to the interface
- * @param bufferLength: the maximum length of the buffer
  * @return -1 in case no byte is written, 1 in case byte was available
  */
 int8_t SR_nextByte_ActiveShiftRegister();

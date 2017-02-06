@@ -9,7 +9,8 @@
 #define DOTMATRIXDISPLAY_H_
 
 #include <stdint.h>
-//#include "defines.h"
+#include "../Path.h"
+#include PATH_RSOSDEFINES_H
 
 /**
  * sizes
@@ -65,8 +66,7 @@ typedef struct DisplayElement_t {
 } DisplayElement;
 
 extern int8_t DotMatrix_size;
-extern DisplayElement* DotMatrix_mem;
-//extern DisplayElement DotMatrix_mem[DOTMATRIX_MEMSIZE];
+extern DisplayElement DotMatrix_mem[DOTMATRIX_MEMSIZE];
 
 /**
  * resets the display, initializes the dot matrix display function

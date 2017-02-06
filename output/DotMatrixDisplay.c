@@ -42,7 +42,7 @@ DisplayElement* DotMatrix_newDisplayElement(uint8_t xpos, uint8_t ypos, uint8_t 
 	DotMatrix_mem[DotMatrix_size].buffer = &dotMatrix_displayBuffer[xpos][(ypos >> 3)];
 
 	DotMatrix_size += 1;
-	return DotMatrix_mem[DotMatrix_size - 1];
+	return &DotMatrix_mem[DotMatrix_size - 1];
 }
 
 inline int8_t DotMatrix_changeElement_betweenLines(DisplayElement* delm,
@@ -88,7 +88,7 @@ inline int8_t DotMatrix_changeElement_betweenLines(DisplayElement* delm,
 	for ( ; i>0; i-=1)
 	{
 		dotMatrix_displayBuffer[xpos][line_upper] &= ~mask_upper;
-		dotMatrix_displayBuffer[xpos][line_upper] |= ((data >> offset_upper) & mask_upper);
+		dotMatrix_displayBuffer[xpos][line_upper] |= ( (data >> offset_upper) & mask_upper);
 		xpos += 1;
 	}
 
@@ -99,16 +99,18 @@ inline int8_t DotMatrix_changeElement_betweenLines(DisplayElement* delm,
 		for ( ; i>0; i-=1)
 		{
 			dotMatrix_displayBuffer[xpos][line_lower] &= ~mask_lower;
-			dotMatrix_displayBuffer[xpos][line_lower] |= ((data << (8-offset_upper)) & mask_lower);
+			dotMatrix_displayBuffer[xpos][line_lower] |= ( (data << (8-offset_upper)) & mask_lower);
 			xpos += 1;
 		}
 	}
+
+	return -1;
 }
 
 int8_t DotMatrix_changeElementN(DisplayElement* delm, uint8_t xpos, uint8_t ypos, uint8_t * data, uint8_t datalen)
 {
 	uint8_t line = delm->height_y >> 3;
-	uint8_t offset = delm->heigt % 0x07;
+	uint8_t offset = delm->height_y % 0x07;
 
 	if (offset != 0)
 	{
@@ -118,12 +120,12 @@ int8_t DotMatrix_changeElementN(DisplayElement* delm, uint8_t xpos, uint8_t ypos
 	{
 
 	}
-
+	return -1;
 }
 
-int8_t DotMatrix_changeElement(DisplayElement* delm, uint8_t xpos, uint8_t ypos, uint8_t * data)
+int8_t DotMatrix_changeElement(DisplayElement* delm, uint8_t xpos, uint8_t ypos, uint8_t data)
 {
-
+    return -1;
 }
 
 
