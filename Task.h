@@ -10,6 +10,8 @@
  *      changed followUpTask definition: structure contains pointer to an external defined array, saves some memory
  * 2017 02 05
  *      changed function addFollowUpTask, fixed error
+ * 2017 02 06
+ *      added function getTaskNumber
  */
 
 #ifndef TASK_H_
@@ -17,6 +19,8 @@
 
 #include "Path.h"
 #include PATH_RSOSDEFINES_H
+
+#include <stdint.h>
 
 /**
  * type definition of the function executed when task is scheduled
@@ -112,6 +116,11 @@ void setTaskCyclic(Task* task, char cycles);
  * @param delay: the number of cycles the scheduler waits (1 to 8 delay cycles)
  */
 void setTaskDelay(Task* task, char delay);
+
+/**
+ * @return: the number of the task in the task_mem array, -1 on error
+ */
+int8_t getTaskNumber(Task* task);
 
 /**
  * saves the current running task to make a context change

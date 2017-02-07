@@ -124,6 +124,20 @@ void setTaskDelay(Task* task, char delay)
 	task->currentDelay = delay;
 }
 
+int8_t getTaskNumber(Task* task) {
+    void * p = task_mem;
+    int8_t retVal = 0;
+    while (p != task) {
+        p += sizeof(Task);
+        retVal += 1;
+        if (retVal & 0x80) {
+            retVal = -1;
+            break;
+        }
+    }
+    return retVal;
+}
+
 void enableScheduler()
 {
 	schedulerEnabled = 1;

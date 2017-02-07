@@ -7,6 +7,8 @@
  * Changelog
  * 2017 02 05
  *      changed button structure: now contains port as pointer to actual port, further changes pending
+ * 2017 02 06
+ *      refactoring: splitting button and waitTimer, changed task reference to number
  */
 
 #ifndef BUTTONS_H_
@@ -37,7 +39,7 @@ struct Button_t;
  *      W...: wait time (0..15)
  *  bit: the pin number
  *  port: the port the pin belongs to
- *  task: the reference to the connected Task
+ *  task: the number of the task, -1 if no task is available
  *
  *  MEMORY
  *      this structure takes up 6 Bytes
@@ -47,7 +49,7 @@ typedef struct Button_t{
     volatile uint8_t currentWaitTime;
 	uint8_t bit;
 	volatile unsigned char * port;
-	uint8_t task;
+	int8_t task;
 } Button;
 
 extern char buttons_size;
@@ -76,7 +78,7 @@ void initButtonOperation(uint16_t clockMultiply);
  * @return: a reference to the new button
  */
 //Button* initButton(unsigned char bit, unsigned char port, unsigned char waitTime);
-Button* initButton(unsigned char bit, volatile unsigned char * port, unsigned char waitTime);
+Button* initButton(unsigned char bit, volatile unsigned char * port, uint8_t waitTime);
 
 /**
  * adds a task that should be scheduled if the pin interrupt is received

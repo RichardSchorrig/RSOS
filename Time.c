@@ -48,7 +48,7 @@ void addButtonToTimer(WaitTimer* waitTimer, unsigned char buttonNr)
 void setTimer(WaitTimer* waitTimer)
 {
 //	if (waitTimer->status & taskIsOnStart)
-    if (waitTimer->taskOnStart != 0)
+    if (waitTimer->taskOnStart != -1)
 	{
 		scheduleTask(waitTimer->taskOnStart);
 	}
@@ -68,12 +68,12 @@ void continueTimer(WaitTimer* waitTimer)
 
 void setTaskOnStart(WaitTimer* waitTimer, Task* task)
 {
-	waitTimer->taskOnStart = task;
+	waitTimer->taskOnStart = getTaskNumber(task);
 	waitTimer->status |= taskIsOnStart;
 }
 void setTaskOnStop(WaitTimer* waitTimer, Task* task)
 {
-	waitTimer->taskOnStop = task;
+	waitTimer->taskOnStop = getTaskNumber(task);
 	waitTimer->status |= taskIsOnEnd;
 }
 

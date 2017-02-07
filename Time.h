@@ -7,6 +7,8 @@
  * Changelog:
  * 2017 02 05
  *      added function continueTimer(WaitTimer*), not tested
+ * 2017 02 06
+ *      refactoring: splitting WaitTimer and Button, changed task reference to number (pending)
  */
 
 #ifndef TIME_H_

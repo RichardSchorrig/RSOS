@@ -15,22 +15,39 @@ static const uint8_t exponentMask = 0x30;
 #define exponent_0 0x00
 #define exponent_2 0x01
 #define exponent_4 0x10
-/*
-static const uint8_t exponent_0 = 0x00;
-static const uint8_t exponent_2 = 0x01;
-static const uint8_t exponent_4 = 0x10;
-*/
+
 static const uint8_t waitTimeMask = 0x0F;
 
-Button* initButton(unsigned char bit, volatile unsigned char * port, unsigned char waitTime)
+static Task* task_buttonWaitScheduler;
+static WaitTimer* timer_buttonWaitScheduler;
+
+void initButtonOperation(uint16_t clockMultiply) {
+    task_buttonWaitScheduler = addTask(0, buttonWaitScheduler);
+    timer_buttonWaitScheduler = initWaitTimer(clockMultiply);
+
+    setTimerCyclic(timer_buttonWaitScheduler);
+    setTaskOnStop(timer_buttonWaitScheduler, task_buttonWaitScheduler);
+    setTimer(timer_buttonWaitScheduler);
+}
+
+inline uint8_t getExponentAndTime(uint8_t time) {
+    uint8_t timeCpy = time;
+    uint8_t exponent = 0;
+    while (timeCpy & ~waitTimeMask) {
+        timeCpy >> 2;
+        exponent += 2;
+    }
+    exponent <<= 4;
+    return (exponent | timeCpy);
+}
+
+Button* initButton(unsigned char bit, volatile unsigned char * port, uint8_t waitTime)
 {
 	buttons_mem[buttons_size].bit = bit;
 	buttons_mem[buttons_size].port = port;
-
-
-	WaitTimer* timer = initWaitTimer(waitTime);
-	buttons_mem[buttons_size].timer = timer;
-	addButtonToTimer(timer, buttons_size);
+	buttons_mem[buttons_size].status = getExponentAndTime(waitTime);
+	buttons_mem[buttons_size].currentWaitTime = 0;
+	buttons_mem[buttons_size].task = -1;
 
 	buttons_size += 1;
 
@@ -52,18 +69,14 @@ Button* initButton(unsigned char bit, volatile unsigned char * port, unsigned ch
 
 void addTaskOnPressToButton(Button* button, Task* task)
 {
-	setTaskOnStart(button->timer, task);
+	button->task = getTaskNumber(task);
+	button->status |= taskOnPress;
 }
 
 void addTaskOnReleaseToButton(Button* button, Task* task)
 {
-	setTaskOnStop(button->timer, task);
-}
-
-inline void setWaitTime(Button* btn)
-{
-	setTimer(btn->timer);
-	//btn->timer->currentWaitTime = btn->timer->waitTime;
+    button->task = getTaskNumber(task);
+    button->status &= ~taskOnPress;
 }
 
 inline void enableBtnInterrupt(Button* btn)
@@ -94,17 +107,19 @@ inline void Button_setWaitTime(Button* btn) {
 }
 
 void buttonPressed(Button* button) {
-    disableBtnInterrupt(button);
-    Button_setWaitTime(button);
-    if (button->status & taskOnPress && button->task != 255) {
-        scheduleTask(&task_mem[button->task]);
+    if (button->status & isActive) {
+        disableBtnInterrupt(button);
+        Button_setWaitTime(button);
+        if (button->status & taskOnPress && button->task != -1) {
+            scheduleTask(&task_mem[button->task]);
+        }
+        button->status |= isActive;
     }
-    button->status |= isActive;
 }
 
 inline void buttonReleased(Button* button) {
     enableBtnInterrupt(button);
-    if (!(button->status & taskOnPress) && button->task != 255) {
+    if (!(button->status & taskOnPress) && button->task != -1) {
         scheduleTask(&task_mem[button->task]);
     }
     button->status &= ~isActive;
