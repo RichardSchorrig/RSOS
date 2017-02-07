@@ -34,10 +34,14 @@ inline uint8_t getExponentAndTime(uint8_t time) {
     uint8_t timeCpy = time;
     uint8_t exponent = 0;
     while (timeCpy & ~waitTimeMask) {
-        timeCpy >> 2;
+        timeCpy >>= 2;
         exponent += 2;
     }
-    exponent <<= 4;
+    switch (exponent) {
+    case 0: break;
+    case 2: exponent = exponent_2;
+    case 4: exponent = exponent_4;
+    }
     return (exponent | timeCpy);
 }
 
@@ -107,7 +111,7 @@ inline void Button_setWaitTime(Button* btn) {
 }
 
 void buttonPressed(Button* button) {
-    if (button->status & isActive) {
+    if ((~button->status) & isActive) {
         disableBtnInterrupt(button);
         Button_setWaitTime(button);
         if (button->status & taskOnPress && button->task != -1) {
@@ -136,7 +140,7 @@ void buttonWaitScheduler() {
 
                 if (*(btn->port) & btn->bit) {  //button is not pressed
                     if (btn->currentWaitTime == 0xFF) { //button was pressed on debounce time
-                        setWaitTime(btn);               //debounce second time
+                        Button_setWaitTime(btn);               //debounce second time
                     }
                     else {
                         buttonReleased(btn);

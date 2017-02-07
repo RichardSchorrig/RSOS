@@ -23,11 +23,17 @@
  * B: button connected
  * xxx: number of the connected button (0..7)
  */
-static const unsigned int connectedButtonMask = 0x0007;
-static const unsigned int buttonConnected = 0x0008;
-static const unsigned int taskIsOnStart = 0x2000;
-static const unsigned int taskIsOnEnd = 0x1000;
-static const unsigned int waitTimeMask = 0x0FF0;
+//static const unsigned int connectedButtonMask = 0x0007;
+//static const unsigned int buttonConnected = 0x0008;
+//static const unsigned int taskIsOnStart = 0x2000;
+//static const unsigned int taskIsOnEnd = 0x1000;
+static const uint16_t waitTimeMask = 0x0FFF;
+
+static const uint16_t exponentMask = 0x3000;
+#define exponent_0 0x0000
+#define exponent_2 0x1000
+#define exponent_4 0x2000
+
 static const unsigned int isCyclicTimer = 0x4000;
 static const unsigned int isActive = 0x8000;
 
@@ -36,13 +42,10 @@ WaitTimer* initWaitTimer(unsigned char waitTime)
 	waitTimers_mem[timers_size].status = 0;
 	waitTimers_mem[timers_size].status |= (waitTime << 4) & waitTimeMask;
 	waitTimers_mem[timers_size].currentWaitTime = 0;
+	waitTimers_mem[timers_size].taskOnStart = -1;
+	waitTimers_mem[timers_size].taskOnStop = -1;
 	timers_size += 1;
 	return &waitTimers_mem[timers_size-1];
-}
-
-void addButtonToTimer(WaitTimer* waitTimer, unsigned char buttonNr)
-{
-	waitTimer->status |= buttonConnected | (buttonNr & connectedButtonMask);
 }
 
 void setTimer(WaitTimer* waitTimer)
@@ -50,10 +53,26 @@ void setTimer(WaitTimer* waitTimer)
 //	if (waitTimer->status & taskIsOnStart)
     if (waitTimer->taskOnStart != -1)
 	{
-		scheduleTask(waitTimer->taskOnStart);
+		scheduleTask(&task_mem[waitTimer->taskOnStart]);
 	}
-	waitTimer->currentWaitTime = (waitTimer->status & waitTimeMask) >> 4;
+    switch (waitTimer->status & exponentMask) {
+    case exponent_0: waitTimer->currentWaitTime = waitTimer->status & waitTimeMask; break;
+    case exponent_2: waitTimer->currentWaitTime = (waitTimer->status & waitTimeMask) << 2; break;
+    case exponent_4: waitTimer->currentWaitTime = (waitTimer->status & waitTimeMask) << 4; break;
+    }
 	waitTimer->status |= isActive;
+}
+
+inline void stopTimer(WaitTimer* waitTimer) {
+    if (waitTimer->taskOnStop != -1) {
+        scheduleTask(&task_mem[waitTimer->taskOnStop]);
+    }
+    if (waitTimer->status & isCyclicTimer) {
+        setTimer(waitTimer);
+    }
+    else {
+        waitTimer->status &= ~isActive;
+    }
 }
 
 void haltTimer(WaitTimer* waitTimer)
@@ -69,15 +88,13 @@ void continueTimer(WaitTimer* waitTimer)
 void setTaskOnStart(WaitTimer* waitTimer, Task* task)
 {
 	waitTimer->taskOnStart = getTaskNumber(task);
-	waitTimer->status |= taskIsOnStart;
 }
 void setTaskOnStop(WaitTimer* waitTimer, Task* task)
 {
 	waitTimer->taskOnStop = getTaskNumber(task);
-	waitTimer->status |= taskIsOnEnd;
 }
 
-void setNewWaitTime(unsigned char waitTime, WaitTimer* waitTimer)
+void setNewWaitTime(uint16_t waitTime, WaitTimer* waitTimer)
 {
 	waitTimer->currentWaitTime = waitTime;
 }
@@ -91,12 +108,12 @@ inline void waitScheduler()
 {
 	signed char i;
 	WaitTimer* wT;
-	for (i=timers_size-1; i>=0; i--)
+	for (i=timers_size; i>0; i--)
 	{
-		wT = &waitTimers_mem[i];
+		wT = &waitTimers_mem[i-1];
 		if (wT->status & isActive)
 		{
-			if (wT->currentWaitTime != 0 && wT->currentWaitTime != 255)
+			if (wT->currentWaitTime != 0)
 			{
 				{
 					wT->currentWaitTime -= 1;
@@ -104,84 +121,7 @@ inline void waitScheduler()
 			}
 			else
 			{
-//				if (wT->status & buttonConnected)
-			    if (wT->connectedButton != 0)
-				{
-					signed char btn = (wT->status & connectedButtonMask);
-					/*
-					if (buttons_mem[btn].port == 1)				//checks if buttons still pressed & enables interrupt only on release
-					{
-						if (P1IN & buttons_mem[btn].bit)
-						{
-							if (wT->currentWaitTime == 255)
-								setTimer(wT);
-							else
-							{
-								enableBtnInterrupt(&buttons_mem[wT->status & connectedButtonMask]);
-								scheduleTask(wT->taskOnStop);
-								wT->status &= ~isActive;
-							}
-						}
-						else
-						{
-							wT->currentWaitTime = 255;
-							wT->status |= isActive;
-						}
-					}
-					else if (buttons_mem[btn].port == 2)
-					{
-						if (P2IN & buttons_mem[btn].bit)
-						{
-							if (wT->currentWaitTime == 255)
-								setTimer(wT);
-							else
-							{
-								enableBtnInterrupt(&buttons_mem[wT->status & connectedButtonMask]);
-								scheduleTask(wT->taskOnStop);
-								wT->status &= ~isActive;
-							}
-						}
-						else
-						{
-							wT->currentWaitTime = 255;
-							wT->status |= isActive;
-						}
-					}
-					*/
-					if (*(wT->connectedButton->port) & wT->connectedButton->bit) {
-//					if (*buttons_mem[btn].port & buttons_mem[btn].bit) {
-					    if (wT->currentWaitTime == 255)
-                            setTimer(wT);
-                        else
-                        {
-                            enableBtnInterrupt(&buttons_mem[wT->status & connectedButtonMask]);
-                            scheduleTask(wT->taskOnStop);
-                            wT->status &= ~isActive;
-                        }
-					}
-                    else
-                    {
-                        wT->currentWaitTime = 255;
-                        wT->status |= isActive;
-                    }
-				}
-				else
-				{
-//					if (wT->status & taskIsOnEnd && wT->currentWaitTime == 0)
-				    if (wT->taskOnStop != 0)
-					{
-						scheduleTask(wT->taskOnStop);
-					}
-					if (wT->status & isCyclicTimer)
-					{
-						setTimer(wT);
-					}
-					else
-					{
-						wT->status &= ~isActive;
-					}
-				}
-
+			    stopTimer(wT);
 			}
 		}
 	}

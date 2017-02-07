@@ -116,7 +116,6 @@ void buttonPressed(Button* button);
  */
 void buttonWaitScheduler();
 
-void setWaitTime(struct Button_t* btn);
 inline void enableBtnInterrupt(Button* btn);
 inline void disableBtnInterrupt(Button* btn);
 

@@ -49,8 +49,8 @@ struct WaitTimer_t;
 typedef struct WaitTimer_t{
 	volatile uint16_t status;
 	volatile uint16_t currentWaitTime;
-	uint8_t taskOnStart;
-	uint8_t taskOnStop;
+	int8_t taskOnStart;
+	int8_t taskOnStop;
 //	Button* connectedButton;
 } WaitTimer;
 
@@ -83,10 +83,11 @@ void setTaskOnStop(WaitTimer* waitTimer, Task* task);
 
 /**
  * sets a new wait time to the timer. this only affects the current wait time, after the timer is stopped, the original time is restored
+ * can be used in combination with haltTimer and continueTimer
  * @param waitTimer: the wait timer to set
  * @param waitTime: the new wait time
  */
-void setNewWaitTime(unsigned char waitTime, WaitTimer* waitTimer);
+void setNewWaitTime(uint16_t waitTime, WaitTimer* waitTimer);
 
 /**
  * sets the specified timer to be started again after it reaches zero
@@ -112,14 +113,6 @@ void haltTimer(WaitTimer* waitTimer);
  * @param waitTimer: the timer to continue
  */
 void continueTimer(WaitTimer* waitTimer);
-
-/**
- * adds a button to the specified timer. this is called automatically if a Button is initialized.
- * DO NOT CALL!
- * @param waitTimer: the timer to set the button to
- * @param button the button to set
- */
-void addButtonToTimer(WaitTimer* waitTimer, unsigned char buttonNr);
 
 inline void waitScheduler();
 
