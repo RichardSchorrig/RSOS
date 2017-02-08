@@ -73,16 +73,16 @@ typedef struct Task_t {
 	struct Task_t* *followUpTask;
 } Task;
 
-extern signed char tasks_size;  //todo: remove extern
+extern signed char tasks_size;
 extern Task task_mem[MAXTASKS];
 //extern Task* task_mem;
 
-extern unsigned char numberOfRunningTasks;  //todo: remove extern, add encapsulation
-extern unsigned char schedulerEnabled;      //todo: remove extern, add encapsulation
+uint8_t numberOfRunningTasks = 0;
+int8_t schedulerEnabled = 0;
 
-extern unsigned char currentRunningTask;    //todo: remove extern, add encapsulation
+extern int8_t currentRunningTask;
 
-extern unsigned char currentPriority;       //todo: remove extern, add encapsulation
+extern uint8_t currentPriority;
 
 /**
  * adds a task to the task array

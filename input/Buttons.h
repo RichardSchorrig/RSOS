@@ -62,7 +62,7 @@ extern Button buttons_mem[MAXBUTTONS];
  * and the connected WaitTimer "timer_buttonWaitScheduler"
  *
  * it is possible to add a multiplier to all button debounce times
- * this is done by the
+ * this is done by the wait timer which controls the button wait scheduler
  */
 void initButtonOperation(uint16_t clockMultiply);
 

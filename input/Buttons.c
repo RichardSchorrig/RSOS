@@ -13,8 +13,8 @@ static const uint8_t taskOnPress = 0x40;
 
 static const uint8_t exponentMask = 0x30;
 #define exponent_0 0x00
-#define exponent_2 0x01
-#define exponent_4 0x10
+#define exponent_2 0x10
+#define exponent_4 0x20
 
 static const uint8_t waitTimeMask = 0x0F;
 
@@ -39,8 +39,9 @@ inline uint8_t getExponentAndTime(uint8_t time) {
     }
     switch (exponent) {
     case 0: break;
-    case 2: exponent = exponent_2;
-    case 4: exponent = exponent_4;
+    case 2: exponent = exponent_2; break;
+    case 4: exponent = exponent_4; break;
+    default: exponent = 0; break;
     }
     return (exponent | timeCpy);
 }
@@ -123,7 +124,7 @@ void buttonPressed(Button* button) {
 
 inline void buttonReleased(Button* button) {
     enableBtnInterrupt(button);
-    if (!(button->status & taskOnPress) && button->task != -1) {
+    if ((~button->status & taskOnPress) && button->task != -1) {
         scheduleTask(&task_mem[button->task]);
     }
     button->status &= ~isActive;
@@ -140,7 +141,7 @@ void buttonWaitScheduler() {
 
                 if (*(btn->port) & btn->bit) {  //button is not pressed
                     if (btn->currentWaitTime == 0xFF) { //button was pressed on debounce time
-                        Button_setWaitTime(btn);               //debounce second time
+                        Button_setWaitTime(btn);        //debounce second time
                     }
                     else {
                         buttonReleased(btn);
