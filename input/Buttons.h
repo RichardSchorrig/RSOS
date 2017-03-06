@@ -16,10 +16,12 @@
 
 #include "../Task.h"
 #include "../Time.h"
-#include "../Path.h"
-#include PATH_RSOSDEFINES_H
+#include <RSOSDefines.h>
 
 #include <stdint.h>
+
+/* exclude everything if not used */
+#ifdef MAXBUTTONS
 
 struct Button_t;
 
@@ -47,8 +49,8 @@ struct Button_t;
 typedef struct Button_t{
     uint8_t status;
     volatile uint8_t currentWaitTime;
+    volatile unsigned char * port;
 	uint8_t bit;
-	volatile unsigned char * port;
 	int8_t task;
 } Button;
 
@@ -61,6 +63,10 @@ extern Button buttons_mem[MAXBUTTONS];
  * this function inits the task "task_buttonWaitScheduler"
  * and the connected WaitTimer "timer_buttonWaitScheduler"
  *
+ * to operate, the following structures must be available:
+ *      1x Task
+ *      1x WaitTimer
+ *
  * it is possible to add a multiplier to all button debounce times
  * this is done by the wait timer which controls the button wait scheduler
  */
@@ -71,6 +77,8 @@ void initButtonOperation(uint16_t clockMultiply);
  * interrupt enabled, and interrupt edge select to from high to low
  * If a pin interrupt is received, the interrupt is disabled for that pin.
  * after waitTime ticks it will be enabled again.
+ *
+ * Call initButtonOperation first!
  *
  * @param bit: the bit the pin is at
  * @param port: the port the pin is at
@@ -116,7 +124,8 @@ void buttonPressed(Button* button);
  */
 void buttonWaitScheduler();
 
-inline void enableBtnInterrupt(Button* btn);
-inline void disableBtnInterrupt(Button* btn);
+//inline void enableBtnInterrupt(Button* btn);
+//inline void disableBtnInterrupt(Button* btn);
 
+#endif /* MAXBUTTONS */
 #endif /* BUTTONS_H_ */

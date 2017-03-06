@@ -8,17 +8,53 @@
  * 2017 02 05
  *      added function continueTimer(WaitTimer*), not tested
  * 2017 02 06
- *      refactoring: splitting WaitTimer and Button, changed task reference to number (pending)
+ *      refactoring: splitting WaitTimer and Button, changed task reference to number
+ * 2017 03 05
+ *      inlining functions setTimer(), haltTimer(), continueTimer()
  */
 
 #ifndef TIME_H_
 #define TIME_H_
 
 #include "Task.h"
-#include "Path.h"
-#include PATH_RSOSDEFINES_H
+#include <RSOSDefines.h>
 
 #include <stdint.h>
+
+/**
+ * mask for the actual wait time
+ */
+static const uint16_t timer_waitTimeMask = 0x0FFF;
+
+/**
+ * mask for the exponent (0, 2, 4)
+ */
+static const uint16_t exponentMask = 0x3000;
+
+/**
+ * exponent 0
+ */
+#define WaitTimer_exponent_0 0x0000
+
+/**
+ * exponent 2
+ */
+#define WaitTimer_exponent_2 0x1000
+
+/**
+ * exponent 4
+ */
+#define WaitTimer_exponent_4 0x2000
+
+/**
+ * bit identifier: cyclic
+ */
+static const unsigned int WaitTimer_isCyclicTimer = 0x4000;
+
+/**
+ * bit identifier: active
+ */
+static const unsigned int WaitTimer_isActive = 0x8000;
 
 struct WaitTimer_t;
 
@@ -44,18 +80,15 @@ struct WaitTimer_t;
  * MEMORY:
  *  this structure takes up 6 Bytes
  *
- * todo: extra field button, extent wait time to 11 Bits (0..2040)
  */
 typedef struct WaitTimer_t{
 	volatile uint16_t status;
 	volatile uint16_t currentWaitTime;
 	int8_t taskOnStart;
 	int8_t taskOnStop;
-//	Button* connectedButton;
 } WaitTimer;
 
 extern char timers_size;
-//extern WaitTimer* waitTimers_mem;
 extern WaitTimer waitTimers_mem[MAXTIMERS];
 
 /**
@@ -63,7 +96,7 @@ extern WaitTimer waitTimers_mem[MAXTIMERS];
  * @param waitTime: the time to wait; 0..250 Ticks (250 Ticks = 5 sec)
  * @return a reference to the new WaitTimer
  */
-WaitTimer* initWaitTimer(unsigned char waitTime);
+WaitTimer* initWaitTimer(uint16_t waitTime);
 
 /**
  * add a task that should be scheduled if the waitTimer is started
@@ -99,21 +132,43 @@ void setTimerCyclic(WaitTimer* waitTimer);
  * sets the specified timer active to count
  * @param waitTimer: the timer to set active
  */
-void setTimer(WaitTimer* waitTimer);
+inline void setTimer(WaitTimer* waitTimer);
+void setTimer(WaitTimer* waitTimer)
+{
+//  if (waitTimer->status & taskIsOnStart)
+    if (waitTimer->taskOnStart != -1)
+    {
+        scheduleTask(&task_mem[waitTimer->taskOnStart]);
+    }
+    switch (waitTimer->status & exponentMask) {
+    case WaitTimer_exponent_0: waitTimer->currentWaitTime = waitTimer->status & timer_waitTimeMask; break;
+    case WaitTimer_exponent_2: waitTimer->currentWaitTime = (waitTimer->status & timer_waitTimeMask) << 2; break;
+    case WaitTimer_exponent_4: waitTimer->currentWaitTime = (waitTimer->status & timer_waitTimeMask) << 4; break;
+    }
+    waitTimer->status |= WaitTimer_isActive;
+}
 
 /**
  * stops the specified timer. the end task is not scheduled.
  * @param waitTimer: the timer to stop
  */
-void haltTimer(WaitTimer* waitTimer);
+inline void haltTimer(WaitTimer* waitTimer);
+void haltTimer(WaitTimer* waitTimer)
+{
+    waitTimer->status &= ~WaitTimer_isActive;
+}
 
 /**
  * continues the specified timer. the task on start is not scheduled,
  * and the timer is not reset. It continues to run where it was halted.
  * @param waitTimer: the timer to continue
  */
-void continueTimer(WaitTimer* waitTimer);
+inline void continueTimer(WaitTimer* waitTimer);
+void continueTimer(WaitTimer* waitTimer)
+{
+    waitTimer->status |= WaitTimer_isActive;
+}
 
-inline void waitScheduler();
+void waitScheduler();
 
 #endif /* TIME_H_ */

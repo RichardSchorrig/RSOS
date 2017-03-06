@@ -8,18 +8,21 @@
 #include "Buttons.h"
 #include <msp430.h>
 
+/* exclude everything if not used */
+#ifdef MAXBUTTONS
+
 static const uint8_t isActive = 0x80;
 static const uint8_t taskOnPress = 0x40;
 
-static const uint8_t exponentMask = 0x30;
+static const uint8_t Button_exponentMask = 0x30;
 #define exponent_0 0x00
 #define exponent_2 0x10
 #define exponent_4 0x20
 
-static const uint8_t waitTimeMask = 0x0F;
+static const uint8_t button_waitTimeMask = 0x0F;
 
-static Task* task_buttonWaitScheduler;
-static WaitTimer* timer_buttonWaitScheduler;
+static Task* task_buttonWaitScheduler = 0;
+static WaitTimer* timer_buttonWaitScheduler = 0;
 
 void initButtonOperation(uint16_t clockMultiply) {
     task_buttonWaitScheduler = addTask(0, buttonWaitScheduler);
@@ -30,10 +33,11 @@ void initButtonOperation(uint16_t clockMultiply) {
     setTimer(timer_buttonWaitScheduler);
 }
 
-inline uint8_t getExponentAndTime(uint8_t time) {
+inline uint8_t Button_getExponentAndTime(uint8_t time);
+uint8_t Button_getExponentAndTime(uint8_t time) {
     uint8_t timeCpy = time;
     uint8_t exponent = 0;
-    while (timeCpy & ~waitTimeMask) {
+    while (timeCpy & ~button_waitTimeMask) {
         timeCpy >>= 2;
         exponent += 2;
     }
@@ -50,7 +54,7 @@ Button* initButton(unsigned char bit, volatile unsigned char * port, uint8_t wai
 {
 	buttons_mem[buttons_size].bit = bit;
 	buttons_mem[buttons_size].port = port;
-	buttons_mem[buttons_size].status = getExponentAndTime(waitTime);
+	buttons_mem[buttons_size].status = Button_getExponentAndTime(waitTime);
 	buttons_mem[buttons_size].currentWaitTime = 0;
 	buttons_mem[buttons_size].task = -1;
 
@@ -84,7 +88,8 @@ void addTaskOnReleaseToButton(Button* button, Task* task)
     button->status &= ~taskOnPress;
 }
 
-inline void enableBtnInterrupt(Button* btn)
+inline void enableBtnInterrupt(Button* btn);
+void enableBtnInterrupt(Button* btn)
 {
 	if (btn->port == &P1IN)
 	{P1IE |= btn->bit;}
@@ -92,7 +97,8 @@ inline void enableBtnInterrupt(Button* btn)
 	{P2IE |= btn->bit;}
 }
 
-inline void disableBtnInterrupt(Button* btn)
+inline void disableBtnInterrupt(Button* btn);
+void disableBtnInterrupt(Button* btn)
 {
 	if (btn->port == &P1IN)
 	{P1IE &= ~btn->bit;}
@@ -100,15 +106,16 @@ inline void disableBtnInterrupt(Button* btn)
 	{P2IE &= ~btn->bit;}
 }
 
-inline void Button_setWaitTime(Button* btn) {
+inline void Button_setWaitTime(Button* btn);
+void Button_setWaitTime(Button* btn) {
     uint8_t exponent;
-    switch (btn->status & exponentMask) {
+    switch (btn->status & Button_exponentMask) {
     case exponent_0: exponent = 0; break;
     case exponent_2: exponent = 2; break;
     case exponent_4: exponent = 4; break;
     default: exponent = 0; break;
     }
-    btn->currentWaitTime = (btn->status & waitTimeMask) << (exponent);
+    btn->currentWaitTime = (btn->status & button_waitTimeMask) << (exponent);
 }
 
 void buttonPressed(Button* button) {
@@ -122,7 +129,8 @@ void buttonPressed(Button* button) {
     }
 }
 
-inline void buttonReleased(Button* button) {
+inline void buttonReleased(Button* button);
+void buttonReleased(Button* button) {
     enableBtnInterrupt(button);
     if ((~button->status & taskOnPress) && button->task != -1) {
         scheduleTask(&task_mem[button->task]);
@@ -158,3 +166,4 @@ void buttonWaitScheduler() {
     }
 }
 
+#endif /* MAXBUTTONS */

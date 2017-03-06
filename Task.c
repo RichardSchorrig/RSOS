@@ -10,20 +10,7 @@
 
 #define MAX_NR_OF_FOLLOWUP_TASKS 7
 
-static const unsigned int activeBit = 0x8000;
-
-//static const unsigned int hasFollowUpTask = 0x4000;	//deprecated, check
-static const unsigned int followUpNumberMask = 0x7000;	//new, check
-
-static const unsigned int isCycleTask = 0x0800;
-static const unsigned int cycleNumberMask = 0x0700;
-
-static const unsigned int hasWaitTime = 0x0080;
-static const unsigned int waitTimeMask = 0x0070;
-
-static const unsigned int priorityMask = 0x000F;
-
-unsigned char savedTaskNumber;
+static int8_t schedulerEnabled = 0;
 
 Task* addTask(unsigned char priority, TaskFunction* taskfunction)
 {
@@ -39,36 +26,23 @@ Task* addTask(unsigned char priority, TaskFunction* taskfunction)
 	return &task_mem[tasks_size-1];
 }
 
-
-void scheduleTask(Task* task)
-{
-	if (~task->status & activeBit)
-	{
-		task->status |= activeBit;
-		numberOfRunningTasks += 1;
-
-		if ((task->status & priorityMask) > currentPriority)		//check the currentPriority
-		{
-			currentPriority = (task->status & priorityMask);		//maximum priority of running task
-		}
-	}
-}
-
-inline void resetDelay(Task* task)
+inline void resetDelay(Task* task);
+void resetDelay(Task* task)
 {
 	task->currentDelay = ((task->status & waitTimeMask) >> 4) + 1;
 }
 
-inline void resetCycles(Task* task)
+inline void resetCycles(Task* task);
+void resetCycles(Task* task)
 {
 	task->currentCycle = ((task->status & cycleNumberMask) >> 8) + 1;
 }
 
-void unscheduleTask(Task* task) //todo: check if active
+void unscheduleTask(Task* task)
 {
-    if (task->status & activeBit) {
+    if (task->status & Task_isActive) {
         numberOfRunningTasks -= 1;
-        task->status &= ~activeBit;
+        task->status &= ~Task_isActive;
         currentPriority = 0;
     }
 
@@ -124,20 +98,6 @@ void setTaskDelay(Task* task, char delay)
 	task->currentDelay = delay;
 }
 
-int8_t getTaskNumber(Task* task) {
-    void * p = task_mem;
-    int8_t retVal = 0;
-    while (p != task) {
-        p += sizeof(Task);
-        retVal += 1;
-        if (retVal & 0x80) {
-            retVal = -1;
-            break;
-        }
-    }
-    return retVal;
-}
-
 void enableScheduler()
 {
 	schedulerEnabled = 1;
@@ -161,19 +121,22 @@ void restoreCurrentContext()
 	scheduleTask(&task_mem[currentRunningTask]);
 }
 
+extern void schedulerEntered();
+extern void schedulerExited();
+
 void scheduler()
 {
 	while (numberOfRunningTasks || schedulerEnabled)
 	{
 		signed char i;
 		Task* task;
-
+		schedulerEntered();
 		for (i=tasks_size-1; i>=0; i--)
 		{
 			task = &task_mem[i];
 			currentRunningTask = i;
 
-			if (task->status & activeBit)						//Only active tasks go further
+			if (task->status & Task_isActive)					//Only active tasks go further
 			{
 				if (task->currentDelay == 0x00)					//if the delay is zero
 				{
@@ -212,6 +175,7 @@ void scheduler()
 				}
 			}
 		}
+		schedulerExited();
 		__bis_SR_register(LPM0_bits + GIE);       // Enter LPM0 w/ interrupt
 //		__bis_SR_register(LPM3_bits + GIE);       // Enter LPM0 w/ interrupt
 	}

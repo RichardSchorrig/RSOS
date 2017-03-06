@@ -7,15 +7,20 @@
 
 #include "Stepper.h"
 
-#ifdef STEPPER_SHIFTREGISTER
-#endif /* STEPPER_SHIFTREGISTER */
+/* exclude everything if not used */
+#ifdef MAXSTEPPER
+
+uint8_t stepper_buffer[STEPPER_BUFFERSIZE];
+BufferBuffer_uint8* buffer;
 
 #ifdef STEPPER_SHIFTREGISTER
-void initStepperOperation()
+void initStepperOperation(volatile uint8_t * port, uint8_t pin)
 {
-	SR_initOperation((volatile unsigned char *)0x0005CE, (volatile unsigned char *)0x0005CC);
-	stepperShiftRegister = SR_initShiftRegister(0, stepper_buffer, STEPPER_BUFFERSIZE);
-	//todo: init step task here
+    Buffer_uint8* buf = (Buffer_uint8*) initBuffer((void*) stepper_buffer, STEPPER_BUFFERSIZE);
+    buffer = (BufferBuffer_uint8*) initBuffer((void*) &buf, 1);
+	stepperShiftRegister = SR_initShiftRegister(pin, port, buffer, STEPPER_BUFFERSIZE);
+	stepTask = addTask(0, task_stepTask);
+	setTaskCyclic(stepTask, 4);
 }
 #endif /* STEPPER_SHIFTREGISTER */
 
@@ -119,11 +124,12 @@ void step_absolute(Stepper* stepper, unsigned char steps)
 }
 
 #ifdef STEPPER_SHIFTREGISTER
+inline void toggleShiftRegister(Stepper* stepper);
 void toggleShiftRegister(Stepper* stepper)
 {
 	unsigned char move = 0;
-	unsigned char shiftregNr = (stepper->registerPosition.position - 1) / 2;
-	if ((stepper->registerPosition.position - 1) % 2)
+	unsigned char shiftregNr = (stepper->registerPosition.position - 1) >> 1;
+	if ((stepper->registerPosition.position - 1) & 0x01)
 	{
 		move = 4;
 		stepper_buffer[shiftregNr] &= 0x0F;
@@ -135,7 +141,7 @@ void toggleShiftRegister(Stepper* stepper)
 
 	stepper_buffer[shiftregNr] |= (stepper->position_motor & STEPPER_PINS_MASK) << (move);
 }
-
+/*
 void nextByte_ShiftRegister()
 {
 	stepper_bufferPosition += 1;
@@ -196,6 +202,7 @@ void togglePins(Stepper* stepper)
 			P2OUT &= ~stepper->pins.pin3;
 	}
 }
+*/
 #endif /* STEPPER_SHIFTREGISTER */
 
 void rotate(Stepper* stepper)
@@ -339,12 +346,11 @@ void task_stepTask()
 		// add some cycle (it doesn't matter how many cycles since it is repeated and checked each time
 		task_mem[currentRunningTask].currentCycle = 2;
 	#ifdef STEPPER_SHIFTREGISTER
-		//UCA0TXBUF = stepper_buffer[0];
 		noSROperation = SR_activateShiftRegister(stepperShiftRegister, 1);
-//		scheduleTask(task_strobe);
 	#else
 	#endif /* STEPPER_SHIFTREGISTER */
 	}
 }
 
+#endif /* MAXSTEPPER */
 

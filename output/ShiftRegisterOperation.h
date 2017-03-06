@@ -11,12 +11,14 @@
 #ifndef SHIFTREGISTEROPERATION_H_
 #define SHIFTREGISTEROPERATION_H_
 
-#include "../Path.h"
+#include <RSOSDefines.h>
 #include <msp430.h>
 #include <stdint.h>
 #include "../Task.h"
+#include "../buffer/BasicBuffer.h"
 
-#include PATH_RSOSDEFINES_H
+/* exclude everything if not used */
+#ifdef MAXSHIFTREGISTER
 
 typedef struct ShiftRegisterStrobe_t {
     uint8_t pin;
@@ -36,7 +38,8 @@ typedef struct ShiftRegisterStrobe_t {
  *      this structure takes up 8 bytes
  */
 typedef struct ShiftRegisterOperation_t {
-	uint8_t * buffer;
+//	uint8_t * buffer;
+    BufferBuffer_uint8* bufferbuffer;
 	uint8_t bufferLength;
 	uint8_t bytesReceived;
 	uint8_t bytesToProcess;
@@ -46,6 +49,30 @@ typedef struct ShiftRegisterOperation_t {
 
 extern ShiftRegisterOperation shiftRegisterOperation_mem[MAXSHIFTREGISTER];
 extern int8_t shiftRegisterOperation_size;
+
+/**
+ * strobe is activatet on end of transfer
+ * a short square signal is initiated
+ */
+#define STROBE_ON_TRANSFER_END 0x00
+
+/**
+ * strobe is activated on start of transfer and held till end
+ * a long square signal is generated during the whole transmission
+ */
+#define STROBE_ON_TRANSFER_START 0xF0
+
+/**
+ * strobe polarity active high
+ * strobe active is logic high, strobe inactive is pulled low
+ */
+#define STROBE_POLARITY_HIGH 0x0F
+
+/**
+ * strobe polarity active low
+ * strobe active is logic low, strobe inactive is pulled high
+ */
+#define STROBE_POLARITY_LOW 0x00
 
 /**
  * set the address to write to, i.e. the interface transfer buffer register the shift register is connected to.
@@ -66,17 +93,17 @@ void SR_initReadAddress(volatile unsigned char * address);
  * @param writeAddress: the address bytes are written into the interface
  * @param readAddress: the address to read from the interface
  */
-void SR_initOperation(volatile unsigned char * writeAddress, volatile unsigned char * readAddress);
+void SR_initOperation(volatile unsigned char * writeAddress, volatile unsigned char * readAddress, uint8_t strobeOperation);
 
 /**
  * creates a new shift register operation structure
  * @param strobePin: a number indicating the pin for the strobe input
  * of the shift register
- * @param buffer: the buffer memory pointer to be used
+ * @param bufferbuffer: the buffer memory pointer to be used
  * @param bufferLength: the maximum length of the buffer
  * @return: the initialized structure pointer
  */
-ShiftRegisterOperation* SR_initShiftRegister(uint8_t strobePin, uint8_t * buffer, uint8_t bufferLength);
+ShiftRegisterOperation* SR_initShiftRegister(uint8_t strobePin, volatile uint8_t * strobePort, BufferBuffer_uint8* bufferbuffer, uint8_t bufferLength);
 
 /**
  * interrupt service routine call
@@ -93,6 +120,7 @@ int8_t SR_nextByte_ActiveShiftRegister();
  * @param bytesToProcess: the number of bytes to be written/read. Ensure the buffer is long enough!
  * @return: -1 if another SR is activated and being processed or a positive number (including zero) which
  * identifies the activated SR.
+ * you want to check the return value. if -1 is returned, try again in the next cycle
  */
 int8_t SR_activateShiftRegister(ShiftRegisterOperation* sr, uint8_t bytesToProcess);
 
@@ -103,7 +131,15 @@ int8_t SR_activateShiftRegister(ShiftRegisterOperation* sr, uint8_t bytesToProce
  */
 int8_t SR_checkForActiveSROps();
 
+/**
+ * changes the buffer pointer
+ * @param sr: the shift register operation whichs buffer to change
+ * @param buffer: the new buffer pointer
+ * @param bufferlength: the size of the buffer
+ */
+//void SR_changeBuffer(ShiftRegisterOperation* sr, uint8_t* buffer, uint8_t bufferLength);
 
 
 
+#endif /* MAXSHIFTREGISTER */
 #endif /* SHIFTREGISTEROPERATION_H_ */

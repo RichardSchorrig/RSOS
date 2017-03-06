@@ -24,13 +24,17 @@
  */
 #define STEPPER_MAXSTEPS 160
 
-#include "../Path.h"
+#include <RSOSDefines.h>
 #include <msp430.h>
+#include <stdint.h>
 
 
-#include PATH_RSOSDEFINES_H
+#include <RSOSDefines.h>
 #include "../Task.h"
 #include "ShiftRegisterOperation.h"
+
+/* exclude everything if not used */
+#ifdef MAXSTEPPER
 
 typedef struct stepper_pins_t{
 	unsigned char port;
@@ -84,11 +88,11 @@ typedef struct stepper_t{
 #define STEPPER_ACTIVE BIT7
 
 extern Stepper stepper_mem[MAXSTEPPER];
-extern char stepper_size;
+extern int8_t stepper_size;
 
 #ifdef STEPPER_SHIFTREGISTER
-extern unsigned char stepper_buffer[STEPPER_BUFFERSIZE];
-extern unsigned char stepper_bufferPosition;
+//extern uint8_t stepper_buffer[STEPPER_BUFFERSIZE];
+//extern uint8_t stepper_bufferPosition;
 ShiftRegisterOperation* stepperShiftRegister;
 #endif /* STEPPER_SHIFTREGISTER */
 
@@ -96,18 +100,19 @@ ShiftRegisterOperation* stepperShiftRegister;
  * task needed to step the motor(s)
  * set cyclic!
  */
-extern Task* stepTask;
-
-extern Task* task_strobe;
+Task* stepTask;
 
 /**
  * inits the stepper operation.
  * Must be called in order to step anything
+ * Ensure to call SR_initOperation() first.
+ * also make sure to have one task and one shift register operation structure available
  *
- * initializes a Shift Register Operation structure
+ * @param port: the port the strobe pin is at
+ * @param pin: the bit for the strobe pin
  */
 #ifdef STEPPER_SHIFTREGISTER
-void initStepperOperation();
+void initStepperOperation(volatile uint8_t * port, uint8_t pin);
 #endif /* STEPPER_SHIFTREGISTER */
 
 /**
@@ -163,13 +168,12 @@ void step_absolute(Stepper* stepper, unsigned char steps);
 void task_stepTask();
 
 #ifdef STEPPER_SHIFTREGISTER
-inline void toggleShiftRegister(Stepper* stepper);
-inline void nextByte_ShiftRegister();
+//inline void toggleShiftRegister(Stepper* stepper);
 #else
 inline void togglePins(Stepper* stepper);
 #endif /* STEPPER_SHIFTREGISTER */
 
 inline void rotate(Stepper* stepper);
 
-
+#endif /* MAXSTEPPER */
 #endif /* STEPPER_H_ */

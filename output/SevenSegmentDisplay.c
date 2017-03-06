@@ -8,8 +8,13 @@
 #include "SevenSegmentDisplay.h"
 #include "ShiftRegisterOperation.h"
 
+/* exclude everything if not used */
+#ifdef SEVENSEGMENTDIGITS
+
 uint8_t sevenSegmentBuffer[SEVENSEGMENTDIGITS];
 uint8_t sevenSegmentMode;
+
+BufferBuffer_uint8* buffer;
 
 const uint8_t sevenSegment_digits[16] = {0x84, 0xEE, 0x45, 0x46, 0x2E, 0x16, 0x14, 0xCE, 0x04, 0x06, 0x08, 0x30, 0x91, 0x60, 0x11, 0x19};
 const uint8_t sevenSegment_digit_Input = 0xB9;
@@ -19,9 +24,11 @@ const uint8_t sevenSegment_digit_off = 0xFF;
 
 ShiftRegisterOperation* sevenSegmentSR;
 
-void SevenSegmentInit(uint8_t mode)
+void SevenSegmentInit(volatile uint8_t * port, uint8_t pin, uint8_t mode)
 {
-	sevenSegmentSR = SR_initShiftRegister(1, sevenSegmentBuffer, SEVENSEGMENTDIGITS);
+    Buffer_uint8* buf = (Buffer_uint8*) initBuffer((void*) sevenSegmentBuffer, SEVENSEGMENTDIGITS);
+    buffer = (BufferBuffer_uint8*) initBuffer((void*) &buf, 1);
+	sevenSegmentSR = SR_initShiftRegister(pin, port, buffer, SEVENSEGMENTDIGITS);
 	sevenSegmentMode = mode;
 }
 
@@ -59,5 +66,5 @@ default: retVal = -1; break;
 	return retVal;
 }
 
-
+#endif /* SEVENSEGMENTDIGITS */
 

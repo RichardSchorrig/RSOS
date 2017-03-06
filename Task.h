@@ -12,15 +12,43 @@
  *      changed function addFollowUpTask, fixed error
  * 2017 02 06
  *      added function getTaskNumber
+ * 2017 03 05
+ *      moved function scheduleTask(), getTaskNumber(), to header for inlining
  */
 
 #ifndef TASK_H_
 #define TASK_H_
 
-#include "Path.h"
-#include PATH_RSOSDEFINES_H
+#include <RSOSDefines.h>
 
 #include <stdint.h>
+
+/**
+ * bit identifier: active
+ */
+static const unsigned int Task_isActive = 0x8000;
+
+/**
+ * bit identifier: task has follow up tasks
+ */
+static const unsigned int followUpNumberMask = 0x7000;  //new, check
+
+/**
+ * bit identifier: is cyclic
+ */
+static const unsigned int isCycleTask = 0x0800;
+
+/**
+ *
+ */
+static const unsigned int cycleNumberMask = 0x0700;
+
+static const unsigned int hasWaitTime = 0x0080;
+static const unsigned int waitTimeMask = 0x0070;
+
+static const unsigned int priorityMask = 0x000F;
+
+static unsigned char savedTaskNumber;
 
 /**
  * type definition of the function executed when task is scheduled
@@ -44,12 +72,14 @@ struct Task_t;
  * 	  							...
  * 	  							111: 7
  * 	  C: number of cycles:
+ * 	                            0000: 0
  * 	  							0001: 2
  * 	  							0010: 3
  * 	  							...
  * 	  							1110: 15
  * 	  							1111: infinite  //todo!
  * 	  W: number of delay cycles:
+ * 	                            0000: 0
  * 	  							0001: 1
  * 	  							0010: 2
  * 	  							...
@@ -77,12 +107,20 @@ extern signed char tasks_size;
 extern Task task_mem[MAXTASKS];
 //extern Task* task_mem;
 
-uint8_t numberOfRunningTasks = 0;
-int8_t schedulerEnabled = 0;
-
+/**
+ * shows the task number currently running
+ */
 extern int8_t currentRunningTask;
 
+/**
+ * shows the priority of the current running task
+ */
 extern uint8_t currentPriority;
+
+/**
+ * shows the number of currently active tasks
+ */
+extern uint8_t numberOfRunningTasks = 0;
 
 /**
  * adds a task to the task array
@@ -120,7 +158,13 @@ void setTaskDelay(Task* task, char delay);
 /**
  * @return: the number of the task in the task_mem array, -1 on error
  */
-int8_t getTaskNumber(Task* task);
+inline int8_t getTaskNumber(Task* task);
+int8_t getTaskNumber(Task* task) {
+    if (task-task_mem > tasks_size) {
+        return -1;
+    }
+    return task - task_mem;
+}
 
 /**
  * saves the current running task to make a context change
@@ -136,7 +180,20 @@ void restoreCurrentContext();
  * sets a task active, it is executed when the scheduler is working
  * @param task: pointer to the task that should be scheduled
  */
-void scheduleTask(struct Task_t* task);
+inline void scheduleTask(Task* task);
+void scheduleTask(Task* task)
+{
+    if (~task->status & Task_isActive)
+    {
+        task->status |= Task_isActive;
+        numberOfRunningTasks += 1;
+
+        if ((task->status & priorityMask) > currentPriority)        //check the currentPriority
+        {
+            currentPriority = (task->status & priorityMask);        //maximum priority of running task
+        }
+    }
+}
 
 /**
  * sets the scheduler enabled, the scheduler is running continously
