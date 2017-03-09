@@ -11,6 +11,7 @@
 #define MAX_NR_OF_FOLLOWUP_TASKS 7
 
 static int8_t schedulerEnabled = 0;
+static int8_t savedTaskNumber = -1;
 
 Task* addTask(unsigned char priority, TaskFunction* taskfunction)
 {

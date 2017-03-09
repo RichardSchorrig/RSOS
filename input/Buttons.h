@@ -9,6 +9,8 @@
  *      changed button structure: now contains port as pointer to actual port, further changes pending
  * 2017 02 06
  *      refactoring: splitting button and waitTimer, changed task reference to number
+ * 2017 03 08
+ *      moved inline functions to header file
  */
 
 #ifndef BUTTONS_H_
@@ -17,6 +19,8 @@
 #include "../Task.h"
 #include "../Time.h"
 #include <RSOSDefines.h>
+
+#include <msp430.h>
 
 #include <stdint.h>
 
@@ -31,7 +35,7 @@ struct Button_t;
  *  status: bit field which holds:
  *      ATEE WWWW
  *      A: isActive (currently pressed)
- *      T: Task bit: 0: Task on press (start), 1: Task on debounce (wait time is zero)
+ *      T: Task bit: 0: Task is scheduled on press (start), 1: Task is scheduled on debounce (when wait time is zero)
  *      EE: exponent to wait time (0..4) wait time value is shifted by exponent
  *          possible combinations:
  *              00: shift by 0
@@ -57,6 +61,42 @@ typedef struct Button_t{
 extern char buttons_size;
 //extern Button* buttons_mem;
 extern Button buttons_mem[MAXBUTTONS];
+
+/**
+ * bit identifier: is active
+ */
+static const uint8_t Button_isActive = 0x80;
+
+/**
+ * bit identifier: task is on press (immediately scheduled when button is pressed)
+ * if not set, the task is scheduled when debounce time is counted to zero
+ */
+static const uint8_t Button_taskOnPress = 0x40;
+
+/**
+ * mask for the wait time's exponent
+ */
+static const uint8_t Button_exponentMask = 0x30;
+
+/**
+ * exponent 1
+ */
+#define Button_exponent_0 0x00
+
+/**
+ * exponent 2
+ */
+#define Button_exponent_2 0x10
+
+/**
+ * exponent 4
+ */
+#define Button_exponent_4 0x20
+
+/**
+ * mask for the actual wait time (debounce time)
+ */
+static const uint8_t button_waitTimeMask = 0x0F;
 
 /**
  * enables button operation
@@ -102,7 +142,7 @@ void addTaskOnPressToButton(Button* button, Task* task);
 /**
  * adds a task that should be scheduled after the wait time has passed
  *
- * only one task is supported. If a task was already added (either by addTaskOnPress... or addTaskOnRelease...,
+ * only one task is supported. If a task was already added (either by addTaskOnPress... or addTaskOnRelease...)
  * the old task pointer is overwritten by the new one.
  *
  * @param button: the button to set the task to
@@ -111,12 +151,52 @@ void addTaskOnPressToButton(Button* button, Task* task);
 void addTaskOnReleaseToButton(Button* button, Task* task);
 
 /**
+ * disables the interrupt for the pin the button is connected to.
+ * @param btn the button which interrupt should be disabled.
+ */
+static inline void disableBtnInterrupt(Button* btn);
+static void disableBtnInterrupt(Button* btn)
+{
+    if (btn->port == &P1IN)
+    {P1IE &= ~btn->bit;}
+    else if (btn->port == &P2IN)
+    {P2IE &= ~btn->bit;}
+}
+
+/**
+ * sets the button's wait time for debouncing
+ * @param btn the button which wait time is set
+ */
+static inline void Button_setWaitTime(Button* btn);
+static void Button_setWaitTime(Button* btn) {
+    uint8_t exponent;
+    switch (btn->status & Button_exponentMask) {
+    case Button_exponent_0: exponent = 0; break;
+    case Button_exponent_2: exponent = 2; break;
+    case Button_exponent_4: exponent = 4; break;
+    default: exponent = 0; break;
+    }
+    btn->currentWaitTime = (btn->status & button_waitTimeMask) << (exponent);
+}
+
+/**
  * function to call in ISR, when button is pressed.
  * This function disables the interrupt and starts the wait timer for the button.
  * if a task is connected to the button press, it is scheduled.
  * else if a task is connected to the button release, it will be scheduled on release.
+ * @param button the button being pressed
  */
-void buttonPressed(Button* button);
+static inline void buttonPressed(Button* button);
+static void buttonPressed(Button* button) {
+    if ((~button->status) & Button_isActive) {
+        disableBtnInterrupt(button);
+        Button_setWaitTime(button);
+        if (button->status & Button_taskOnPress && button->task != -1) {
+            scheduleTask(&task_mem[button->task]);
+        }
+        button->status |= Button_isActive;
+    }
+}
 
 /**
  * the button wait scheduler

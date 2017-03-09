@@ -48,8 +48,6 @@ static const unsigned int waitTimeMask = 0x0070;
 
 static const unsigned int priorityMask = 0x000F;
 
-static unsigned char savedTaskNumber;
-
 /**
  * type definition of the function executed when task is scheduled
  * todo: void* (TaskFunction) (void*) to pass arguments and return values
@@ -120,7 +118,7 @@ extern uint8_t currentPriority;
 /**
  * shows the number of currently active tasks
  */
-extern uint8_t numberOfRunningTasks = 0;
+extern uint8_t numberOfRunningTasks;
 
 /**
  * adds a task to the task array
@@ -158,8 +156,8 @@ void setTaskDelay(Task* task, char delay);
 /**
  * @return: the number of the task in the task_mem array, -1 on error
  */
-inline int8_t getTaskNumber(Task* task);
-int8_t getTaskNumber(Task* task) {
+static inline int8_t getTaskNumber(Task* task);
+static int8_t getTaskNumber(Task* task) {
     if (task-task_mem > tasks_size) {
         return -1;
     }
@@ -180,8 +178,8 @@ void restoreCurrentContext();
  * sets a task active, it is executed when the scheduler is working
  * @param task: pointer to the task that should be scheduled
  */
-inline void scheduleTask(Task* task);
-void scheduleTask(Task* task)
+static inline void scheduleTask(Task* task);
+static void scheduleTask(Task* task)
 {
     if (~task->status & Task_isActive)
     {

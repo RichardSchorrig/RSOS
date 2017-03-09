@@ -32,7 +32,7 @@ static const uint16_t timer_waitTimeMask = 0x0FFF;
 static const uint16_t exponentMask = 0x3000;
 
 /**
- * exponent 0
+ * exponent 1
  */
 #define WaitTimer_exponent_0 0x0000
 
@@ -132,8 +132,8 @@ void setTimerCyclic(WaitTimer* waitTimer);
  * sets the specified timer active to count
  * @param waitTimer: the timer to set active
  */
-inline void setTimer(WaitTimer* waitTimer);
-void setTimer(WaitTimer* waitTimer)
+static inline void setTimer(WaitTimer* waitTimer);
+static void setTimer(WaitTimer* waitTimer)
 {
 //  if (waitTimer->status & taskIsOnStart)
     if (waitTimer->taskOnStart != -1)
@@ -152,8 +152,8 @@ void setTimer(WaitTimer* waitTimer)
  * stops the specified timer. the end task is not scheduled.
  * @param waitTimer: the timer to stop
  */
-inline void haltTimer(WaitTimer* waitTimer);
-void haltTimer(WaitTimer* waitTimer)
+static inline void haltTimer(WaitTimer* waitTimer);
+static void haltTimer(WaitTimer* waitTimer)
 {
     waitTimer->status &= ~WaitTimer_isActive;
 }
@@ -163,8 +163,8 @@ void haltTimer(WaitTimer* waitTimer)
  * and the timer is not reset. It continues to run where it was halted.
  * @param waitTimer: the timer to continue
  */
-inline void continueTimer(WaitTimer* waitTimer);
-void continueTimer(WaitTimer* waitTimer)
+static inline void continueTimer(WaitTimer* waitTimer);
+static void continueTimer(WaitTimer* waitTimer)
 {
     waitTimer->status |= WaitTimer_isActive;
 }

@@ -6,20 +6,9 @@
  */
 
 #include "Buttons.h"
-#include <msp430.h>
 
 /* exclude everything if not used */
 #ifdef MAXBUTTONS
-
-static const uint8_t isActive = 0x80;
-static const uint8_t taskOnPress = 0x40;
-
-static const uint8_t Button_exponentMask = 0x30;
-#define exponent_0 0x00
-#define exponent_2 0x10
-#define exponent_4 0x20
-
-static const uint8_t button_waitTimeMask = 0x0F;
 
 static Task* task_buttonWaitScheduler = 0;
 static WaitTimer* timer_buttonWaitScheduler = 0;
@@ -43,8 +32,8 @@ uint8_t Button_getExponentAndTime(uint8_t time) {
     }
     switch (exponent) {
     case 0: break;
-    case 2: exponent = exponent_2; break;
-    case 4: exponent = exponent_4; break;
+    case 2: exponent = Button_exponent_2; break;
+    case 4: exponent = Button_exponent_4; break;
     default: exponent = 0; break;
     }
     return (exponent | timeCpy);
@@ -79,13 +68,13 @@ Button* initButton(unsigned char bit, volatile unsigned char * port, uint8_t wai
 void addTaskOnPressToButton(Button* button, Task* task)
 {
 	button->task = getTaskNumber(task);
-	button->status |= taskOnPress;
+	button->status |= Button_taskOnPress;
 }
 
 void addTaskOnReleaseToButton(Button* button, Task* task)
 {
     button->task = getTaskNumber(task);
-    button->status &= ~taskOnPress;
+    button->status &= ~Button_taskOnPress;
 }
 
 inline void enableBtnInterrupt(Button* btn);
@@ -97,45 +86,13 @@ void enableBtnInterrupt(Button* btn)
 	{P2IE |= btn->bit;}
 }
 
-inline void disableBtnInterrupt(Button* btn);
-void disableBtnInterrupt(Button* btn)
-{
-	if (btn->port == &P1IN)
-	{P1IE &= ~btn->bit;}
-	else if (btn->port == &P2IN)
-	{P2IE &= ~btn->bit;}
-}
-
-inline void Button_setWaitTime(Button* btn);
-void Button_setWaitTime(Button* btn) {
-    uint8_t exponent;
-    switch (btn->status & Button_exponentMask) {
-    case exponent_0: exponent = 0; break;
-    case exponent_2: exponent = 2; break;
-    case exponent_4: exponent = 4; break;
-    default: exponent = 0; break;
-    }
-    btn->currentWaitTime = (btn->status & button_waitTimeMask) << (exponent);
-}
-
-void buttonPressed(Button* button) {
-    if ((~button->status) & isActive) {
-        disableBtnInterrupt(button);
-        Button_setWaitTime(button);
-        if (button->status & taskOnPress && button->task != -1) {
-            scheduleTask(&task_mem[button->task]);
-        }
-        button->status |= isActive;
-    }
-}
-
 inline void buttonReleased(Button* button);
 void buttonReleased(Button* button) {
     enableBtnInterrupt(button);
-    if ((~button->status & taskOnPress) && button->task != -1) {
+    if ((~button->status & Button_taskOnPress) && button->task != -1) {
         scheduleTask(&task_mem[button->task]);
     }
-    button->status &= ~isActive;
+    button->status &= ~Button_isActive;
 }
 
 void buttonWaitScheduler() {
@@ -143,7 +100,7 @@ void buttonWaitScheduler() {
     Button* btn;
     for (i=buttons_size; i>0; i-=1) {
         btn = &buttons_mem[i-1];
-        if (btn->status & isActive) {
+        if (btn->status & Button_isActive) {
 
             if (btn->currentWaitTime == 0 || btn->currentWaitTime == 255) {    //wait time is over
 
