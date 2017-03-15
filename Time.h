@@ -21,6 +21,8 @@
 
 #include <stdint.h>
 
+#ifdef MAXTIMERS
+
 /**
  * mask for the actual wait time
  */
@@ -171,4 +173,5 @@ static void continueTimer(WaitTimer* waitTimer)
 
 void waitScheduler();
 
+#endif /* MAXTIMERS */
 #endif /* TIME_H_ */

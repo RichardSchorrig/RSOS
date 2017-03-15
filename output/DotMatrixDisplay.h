@@ -16,48 +16,14 @@
 
 #include "../Task.h"
 #include "../buffer/BasicBuffer.h"
+#include "../buffer/Buffer_int8.h"
+#include "../buffer/BufferBuffer_int8.h"
 
 /**
  * sizes
  */
 #define DOTMATRIX_DISPLAY_LINES (DOTMATRIX_DISPLAY_YRES / 8)
 
-/**
- * commands
- */
-
-/**
- * Command Start Byte:
- * 11xB AxCC
- *
- * B: brightness bit, if set change brightness of LCD backlight
- * A, C: A bit sets instruction mode/ data mode; other bits the according CS signals (CS1/ CS2)
- */
-#define COMMAND_START 0xC0
-#define COMMAND_BRIGHTNESS 0x10
-
-#define COMMAND_START_CS1 0x01
-#define COMMAND_START_CS2 0x02
-#define COMMAND_START_A0 0x08
-
-#define ADDRESS_PINS_MASK 0x0B
-
-
-#define COMMAND_DISPLAYDRIVER_ON 0xAF
-#define COMMAND_DISPLAYDRIVER_OFF 0xAE
-
-#define COMMAND_STATICDRIVE_ON 0xA5
-#define COMMAND_STATICDRIVE_OFF 0xA4
-
-#define COMMAND_RESET 0xE2
-
-#define COMMAND_SETPAGE 0xB8
-#define COMMAND_PAGE0 0x00
-#define COMMAND_PAGE1 0x01
-#define COMMAND_PAGE2 0x02
-#define COMMAND_PAGE3 0x03
-
-#define COMMAND_SETLINE 0xC0 /*Line 0: 0xC0, Line 1: 0xC1 ... Line 31: 0xDF*/
 
 /**
  * Display Element structure

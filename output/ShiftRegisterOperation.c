@@ -16,21 +16,21 @@
 volatile unsigned char * SR_SPIinterface_readAddress = 0;
 volatile unsigned char * SR_SPIinterface_writeAddress = 0;
 
-static Task* task_strobe = 0;
+static Task* SR_task_strobe = 0;
 
-static int8_t activeShiftRegister = -1;
-static int8_t lastActiveShiftRegister = -1;
+static int8_t SR_activeShiftRegister = -1;
+static int8_t SR_lastActiveShiftRegister = -1;
 
-static uint8_t strobeMode = 0;
+static uint8_t SR_strobeMode = 0;
 
-Task* task_activateShiftRegister = 0;
+static Task* SR_task_activateShiftRegister = 0;
 
 extern void enableUSCI_Interrupt();
 
 /** task functions! */
-void SR_task_activateShiftRegister()
+void SR_enableTransmission()
 {
-    enableUSCI_Interrupt();
+    enableUSCI_Interrupt(); //todo: hardware adaption layer (header file with inline function enable...)
 //    UCA0IFG |= UCTXIFG;
 
 //    USCIA0TXRX_ISR();
@@ -54,38 +54,23 @@ void strobePinPullLow(uint8_t index) {
 
 void task_strobe_set()
 {
-    /*
-     * todo smth like this:
-     * typedef struct SR_StrobePins_t {
-     *  volatile unsigned char * port;
-     *  unsigned char pin;
-     * }
-     * sr_strobe_pins[ActiveSR_strobePin].port |= sr_strobe_pins[ActiveSR_strobePin].pin;
-
-	switch (shiftRegisterOperation_mem[lastActiveShiftRegister].strobePin) {
-	case 0: P6OUT |= STROBE_STEPPER; break;
-	case 1: P6OUT |= STROBE_DISPLAY; break;
-	case 2: break;
-	default: break;
-	}
-	*/
-    if (strobeMode & STROBE_ON_TRANSFER_END) {
-        if (lastActiveShiftRegister != -1) {
-            if (strobeMode & STROBE_POLARITY_HIGH) {
-                strobePinPullHigh(lastActiveShiftRegister);
+    if (SR_strobeMode & STROBE_ON_TRANSFER_END) {
+        if (SR_lastActiveShiftRegister != -1) {
+            if (SR_strobeMode & STROBE_POLARITY_HIGH) {
+                strobePinPullHigh(SR_lastActiveShiftRegister);
             }
             else {
-                strobePinPullLow(lastActiveShiftRegister);
+                strobePinPullLow(SR_lastActiveShiftRegister);
             }
         }
     }
-    else if (strobeMode & STROBE_ON_TRANSFER_START) {
-        if (activeShiftRegister != -1) {
-            if (strobeMode & STROBE_POLARITY_HIGH) {
-                strobePinPullHigh(activeShiftRegister);
+    else if (SR_strobeMode & STROBE_ON_TRANSFER_START) {
+        if (SR_activeShiftRegister != -1) {
+            if (SR_strobeMode & STROBE_POLARITY_HIGH) {
+                strobePinPullHigh(SR_activeShiftRegister);
             }
             else {
-                strobePinPullLow(activeShiftRegister);
+                strobePinPullLow(SR_activeShiftRegister);
             }
         }
     }
@@ -93,22 +78,14 @@ void task_strobe_set()
 
 void task_strobe_reset()
 {
-    /*
-	switch (shiftRegisterOperation_mem[lastActiveShiftRegister].strobePin) {
-	case 0: P6OUT &= ~STROBE_STEPPER; break;
-	case 1: P6OUT &= ~STROBE_DISPLAY; break;
-	case 2: break;
-	default: break;
-	}
-	*/
-    if (lastActiveShiftRegister != -1) {
-        if (strobeMode & STROBE_POLARITY_HIGH) {
-            strobePinPullLow(lastActiveShiftRegister);
+    if (SR_lastActiveShiftRegister != -1) {
+        if (SR_strobeMode & STROBE_POLARITY_HIGH) {
+            strobePinPullLow(SR_lastActiveShiftRegister);
         }
         else {
-            strobePinPullHigh(lastActiveShiftRegister);
+            strobePinPullHigh(SR_lastActiveShiftRegister);
         }
-        lastActiveShiftRegister = -1;
+        SR_lastActiveShiftRegister = -1;
     }
 }
 /** end of task functions */
@@ -131,20 +108,20 @@ void SR_initOperation(volatile unsigned char * writeAddress, volatile unsigned c
 	SR_initReadAddress(readAddress);
 
 	if (strobeOperation & STROBE_ON_TRANSFER_END) {
-        task_strobe = addTask(SHIFTREGISTER_STROBESET_PRIORITY, task_strobe_set);
+        SR_task_strobe = addTask(SHIFTREGISTER_STROBESET_PRIORITY, task_strobe_set);
         Task* task_reset = addTask(SHIFTREGISTER_STROBERESET_PRIORITY, task_strobe_reset);
-        addFollowUpTask(task_strobe, followUpArray, task_reset);
-        task_activateShiftRegister = addTask(SHIFTREGISTER_ACTIVATE_PRIORITY, SR_task_activateShiftRegister);
+        addFollowUpTask(SR_task_strobe, followUpArray, task_reset);
+        SR_task_activateShiftRegister = addTask(SHIFTREGISTER_ACTIVATE_PRIORITY, SR_enableTransmission);
 	}
 	else if (strobeOperation & STROBE_ON_TRANSFER_START) {
-	    Task* task_transmit = addTask(SHIFTREGISTER_ACTIVATE_PRIORITY, SR_task_activateShiftRegister);
-	    task_activateShiftRegister = addTask(SHIFTREGISTER_STROBESET_PRIORITY, task_strobe_set);
-        task_strobe = addTask(SHIFTREGISTER_STROBERESET_PRIORITY, task_strobe_reset);
+	    Task* task_transmit = addTask(SHIFTREGISTER_ACTIVATE_PRIORITY, SR_enableTransmission);
+	    SR_task_activateShiftRegister = addTask(SHIFTREGISTER_STROBESET_PRIORITY, task_strobe_set);
+        SR_task_strobe = addTask(SHIFTREGISTER_STROBERESET_PRIORITY, task_strobe_reset);
 
-        addFollowUpTask(task_activateShiftRegister, followUpArray, task_transmit);
+        addFollowUpTask(SR_task_activateShiftRegister, followUpArray, task_transmit);
 	}
 
-	strobeMode = strobeOperation;
+	SR_strobeMode = strobeOperation;
 }
 
 ShiftRegisterOperation* SR_initShiftRegister(uint8_t strobePin, volatile uint8_t * strobePort, BufferBuffer_uint8* bufferbuffer, uint8_t bufferLength)
@@ -162,62 +139,28 @@ ShiftRegisterOperation* SR_initShiftRegister(uint8_t strobePin, volatile uint8_t
 
 int8_t SR_checkForActiveSROps()
 {
-	activeShiftRegister = -1;
+	SR_activeShiftRegister = -1;
 	int8_t i;
 	for (i = shiftRegisterOperation_size-1; i>=0; i-=1)
 	{
 		if (shiftRegisterOperation_mem[i].bytesToProcess != 0)
 		{
-			activeShiftRegister = i;
-			getNext_bufferbuffer_uint8(shiftRegisterOperation_mem[activeShiftRegister].bufferbuffer, SR_SPIinterface_writeAddress);
+			SR_activeShiftRegister = i;
+			getNext_bufferbuffer_uint8(shiftRegisterOperation_mem[SR_activeShiftRegister].bufferbuffer, SR_SPIinterface_writeAddress);
 			//*SR_SPIinterface_writeAddress = shiftRegisterOperation_mem[activeShiftRegister].buffer[shiftRegisterOperation_mem[activeShiftRegister].bytesReceived];
-			shiftRegisterOperation_mem[activeShiftRegister].bytesToProcess -= 1;
+			shiftRegisterOperation_mem[SR_activeShiftRegister].bytesToProcess -= 1;
 			break;
 		}
 	}
-	return activeShiftRegister;
-}
-
-int8_t SR_nextByte_ActiveShiftRegister()
-{
-	int8_t retVal = -1;
-	if (activeShiftRegister != -1)
-	{
-		//shiftRegisterOperation_mem[activeShiftRegister].buffer[shiftRegisterOperation_mem[activeShiftRegister].bytesReceived] = *SR_SPIinterface_readAddress;
-/*
-		if (shiftRegisterOperation_mem[activeShiftRegister].bytesReceived < shiftRegisterOperation_mem[activeShiftRegister].bufferLength)
-		{
-//			shiftRegisterOperation_mem[activeShiftRegister].buffer[shiftRegisterOperation_mem[activeShiftRegister].bytesReceived] = UCA0RXBUF;
-		    set_bufferbuffer_uint8(shiftRegisterOperation_mem[activeShiftRegister].bufferbuffer, SR_SPIinterface_readAddress);
-		    //shiftRegisterOperation_mem[activeShiftRegister].buffer[shiftRegisterOperation_mem[activeShiftRegister].bytesReceived] = *SR_SPIinterface_readAddress;
-			shiftRegisterOperation_mem[activeShiftRegister].bytesReceived += 1;
-		}
-*/
-		if (shiftRegisterOperation_mem[activeShiftRegister].bytesToProcess > 0)
-		{
-			//*SR_SPIinterface_writeAddress = shiftRegisterOperation_mem[activeShiftRegister].buffer[shiftRegisterOperation_mem[activeShiftRegister].bytesReceived];
-//			UCA0TXBUF = shiftRegisterOperation_mem[activeShiftRegister].buffer[shiftRegisterOperation_mem[activeShiftRegister].bytesReceived];
-			shiftRegisterOperation_mem[activeShiftRegister].bytesToProcess -= 1;
-			retVal = 1;
-			set_getNext_bufferbuffer_uint8(shiftRegisterOperation_mem[activeShiftRegister].bufferbuffer, 0, SR_SPIinterface_writeAddress);
-		}
-		else
-		{
-			scheduleTask(task_strobe);
-			lastActiveShiftRegister = activeShiftRegister;
-			activeShiftRegister = -1;
-//			retVal = SR_checkForActiveSROps();
-		}
-	}
-	return retVal;
+	return SR_activeShiftRegister;
 }
 
 int8_t SR_activateShiftRegister(ShiftRegisterOperation* sr, uint8_t bytesToProcess)
 {
 	int8_t retVal = -1;
-	if (activeShiftRegister == -1)
+	if (SR_activeShiftRegister == -1)
 	{
-	    activeShiftRegister = sr - shiftRegisterOperation_mem;
+	    SR_activeShiftRegister = sr - shiftRegisterOperation_mem;
 	    sr->bytesToProcess = bytesToProcess;
 	    sr->bytesReceived = 0;
 	    /*
@@ -232,8 +175,8 @@ int8_t SR_activateShiftRegister(ShiftRegisterOperation* sr, uint8_t bytesToProce
 		    }
 		}
 		*/
-		scheduleTask(task_activateShiftRegister);
-		retVal = activeShiftRegister;
+		scheduleTask(SR_task_activateShiftRegister);
+		retVal = SR_activeShiftRegister;
 	}
 	return retVal;
 }
@@ -243,5 +186,28 @@ void SR_changeBuffer(ShiftRegisterOperation* sr, uint8_t* buffer, uint8_t buffer
     sr->bufferLength = bufferLength;
 }
 */
+
+int8_t SR_nextByte_ActiveShiftRegister()
+{
+    int8_t retVal = -1;
+    if (SR_activeShiftRegister != -1)
+    {
+        if (shiftRegisterOperation_mem[SR_activeShiftRegister].bytesToProcess > 0)
+        {
+            //*SR_SPIinterface_writeAddress = shiftRegisterOperation_mem[activeShiftRegister].buffer[shiftRegisterOperation_mem[activeShiftRegister].bytesReceived];
+//          UCA0TXBUF = shiftRegisterOperation_mem[activeShiftRegister].buffer[shiftRegisterOperation_mem[activeShiftRegister].bytesReceived];
+            shiftRegisterOperation_mem[SR_activeShiftRegister].bytesToProcess -= 1;
+            retVal = 1;
+            set_getNext_bufferbuffer_uint8(shiftRegisterOperation_mem[SR_activeShiftRegister].bufferbuffer, 0, SR_SPIinterface_writeAddress);
+        }
+        else
+        {
+            scheduleTask(SR_task_strobe);
+            SR_lastActiveShiftRegister = SR_activeShiftRegister;
+            SR_activeShiftRegister = -1;
+        }
+    }
+    return retVal;
+}
 
 #endif /* MAXSHIFTREGISTER */

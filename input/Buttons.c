@@ -86,8 +86,8 @@ void enableBtnInterrupt(Button* btn)
 	{P2IE |= btn->bit;}
 }
 
-inline void buttonReleased(Button* button);
-void buttonReleased(Button* button) {
+static inline void buttonReleased(Button* button);
+static void buttonReleased(Button* button) {
     enableBtnInterrupt(button);
     if ((~button->status & Button_taskOnPress) && button->task != -1) {
         scheduleTask(&task_mem[button->task]);

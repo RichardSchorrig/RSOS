@@ -10,8 +10,8 @@
 
 #define MAX_NR_OF_FOLLOWUP_TASKS 7
 
-static int8_t schedulerEnabled = 0;
-static int8_t savedTaskNumber = -1;
+static int8_t task_schedulerEnabled = 0;
+static int8_t task_savedTaskNumber = -1;
 
 Task* addTask(unsigned char priority, TaskFunction* taskfunction)
 {
@@ -101,24 +101,24 @@ void setTaskDelay(Task* task, char delay)
 
 void enableScheduler()
 {
-	schedulerEnabled = 1;
+	task_schedulerEnabled = 1;
 }
 
 void disableScheduler()
 {
-	schedulerEnabled = 0;
+	task_schedulerEnabled = 0;
 }
 
 void saveCurrentContext()
 {
-	savedTaskNumber = currentRunningTask;
+	task_savedTaskNumber = currentRunningTask;
 	unscheduleTask(&task_mem[currentRunningTask]);		//this is bad, schedules all following tasks
 	//todo: another unschedule function
 }
 
 void restoreCurrentContext()
 {
-	currentRunningTask = savedTaskNumber;
+	currentRunningTask = task_savedTaskNumber;
 	scheduleTask(&task_mem[currentRunningTask]);
 }
 
@@ -127,7 +127,7 @@ extern void schedulerExited();
 
 void scheduler()
 {
-	while (numberOfRunningTasks || schedulerEnabled)
+	while (numberOfRunningTasks || task_schedulerEnabled)
 	{
 		signed char i;
 		Task* task;

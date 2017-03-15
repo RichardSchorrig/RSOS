@@ -15,10 +15,10 @@
 
 ShiftRegisterOperation* dotMatrixSR;
 
-static const uint16_t activeBit = 0x8000;
-static const uint16_t isInverted = 0x4000;
-static const uint16_t lineMask = 0x00F0;
-static const uint16_t additionalLineMask = 0x000F;
+static const uint16_t dotMatrix_activeBit = 0x8000;
+static const uint16_t dotMatrix_isInverted = 0x4000;
+static const uint16_t dotMatrix_lineMask = 0x00F0;
+static const uint16_t dotMatrix_additionalLineMask = 0x000F;
 
 /**
  * buffers
@@ -26,23 +26,23 @@ static const uint16_t additionalLineMask = 0x000F;
 uint8_t dotMatrix_displayBuffer[DOTMATRIX_DISPLAY_LINES][DOTMATRIX_DISPLAY_XRES];
 uint8_t dotMatrix_displayCommandBuffer[10];
 
-static BufferBuffer_uint8 * buffer;
-static Buffer_uint8 * command_and_data_Buffer[2];
+static BufferBuffer_uint8 * dotMatrix_dataBufferBuffer;
+static Buffer_uint8 * dotMatrix_command_and_data_Buffer[2];
 
-static Task * task_transferElement = 0;
+static Task * dotMatrix_task_transferElement = 0;
 
 //static DisplayElement* displayElement_entireDisplay = 0;
 
 void DotMatrix_initDisplay(volatile uint8_t * port, uint8_t pin)
 {
 
-    command_and_data_Buffer[0] = (Buffer_uint8*) initBuffer((void*)dotMatrix_displayCommandBuffer, 10);
-    command_and_data_Buffer[1] = (Buffer_uint8*) initBuffer((void*)&dotMatrix_displayBuffer[0][0], DOTMATRIX_DISPLAY_XRES);
-    buffer = (BufferBuffer_uint8*) initBuffer((void*) command_and_data_Buffer, 2);
-	dotMatrixSR = SR_initShiftRegister(pin, port, buffer, DOTMATRIX_DISPLAY_XRES + 10);
+    dotMatrix_command_and_data_Buffer[0] = (Buffer_uint8*) initBuffer((void*)dotMatrix_displayCommandBuffer, 10);
+    dotMatrix_command_and_data_Buffer[1] = (Buffer_uint8*) initBuffer((void*)&dotMatrix_displayBuffer[0][0], DOTMATRIX_DISPLAY_XRES);
+    dotMatrix_dataBufferBuffer = (BufferBuffer_uint8*) initBuffer((void*) dotMatrix_command_and_data_Buffer, 2);
+	dotMatrixSR = SR_initShiftRegister(pin, port, dotMatrix_dataBufferBuffer, DOTMATRIX_DISPLAY_XRES + 10);
 
-	task_transferElement = addTask(1, DotMatrix_transferElement);
-	setTaskCyclic(task_transferElement, 2);
+	dotMatrix_task_transferElement = addTask(1, DotMatrix_transferElement);
+	setTaskCyclic(dotMatrix_task_transferElement, 2);
 
 	dotMatrix_displayCommandBuffer[0] = COMMAND_START | COMMAND_START_CS1 | COMMAND_START_CS2 | COMMAND_START_A0;
 	dotMatrix_displayCommandBuffer[1] = 6;
@@ -53,8 +53,8 @@ void DotMatrix_initDisplay(volatile uint8_t * port, uint8_t pin)
 	dotMatrix_displayCommandBuffer[6] = COMMAND_SETPAGE;
 	dotMatrix_displayCommandBuffer[7] = 0;
 
-	setBufferLength((Buffer_void*) command_and_data_Buffer[0], 8);
-	setBufferLength((Buffer_void*) command_and_data_Buffer[1], 0);
+	setBufferLength((Buffer_void*) dotMatrix_command_and_data_Buffer[0], 8);
+	setBufferLength((Buffer_void*) dotMatrix_command_and_data_Buffer[1], 0);
 
 	SR_activateShiftRegister(dotMatrixSR, 8);   //todo: check return value, might not be activated
 }
@@ -86,12 +86,12 @@ void DotMatrix_transferElement() {
             int8_t i = dotMatrix_size;
             for (; i>0; i-=1) {
 
-                if (dotMatrix_mem[i-1].status & activeBit) {
+                if (dotMatrix_mem[i-1].status & dotMatrix_activeBit) {
                     currentDisplayElement = &dotMatrix_mem[i-1];
                     bufferlength = 0;
 
-                    totalLines = (currentDisplayElement->status & additionalLineMask) + 1;
-                    currentLine = ((currentDisplayElement->status & lineMask) >> 4);
+                    totalLines = (currentDisplayElement->status & dotMatrix_additionalLineMask) + 1;
+                    currentLine = ((currentDisplayElement->status & dotMatrix_lineMask) >> 4);
 
 
                     break;
@@ -113,22 +113,25 @@ void DotMatrix_transferElement() {
 
         if (currentDisplayElement != 0) {
 
-            if ((command_and_data_Buffer[0]->size.readBytes == command_and_data_Buffer[0]->size.size) &&
-                (command_and_data_Buffer[1]->size.readBytes == command_and_data_Buffer[1]->size.size)) {
+//            if ((dotMatrix_command_and_data_Buffer[0]->size.readBytes == dotMatrix_command_and_data_Buffer[0]->size.size) &&
+//                (dotMatrix_command_and_data_Buffer[1]->size.readBytes == dotMatrix_command_and_data_Buffer[1]->size.size))
+
+            if (dotMatrixSR->bytesToProcess == 0)
+            {
                 bufferlength = 0;
                 bufferlength += setCommandPosition(currentLine, currentDisplayElement->pos_x, dotMatrix_displayCommandBuffer, 0, 10);
                 bufferlength += setCommandData(currentDisplayElement->len_x, currentDisplayElement->pos_x, dotMatrix_displayCommandBuffer, bufferlength, 10);
-                setBufferLength((Buffer_void*) command_and_data_Buffer[0], bufferlength);
-                setBuffer((Buffer_void*) command_and_data_Buffer[1],
+                setBufferLength((Buffer_void*) dotMatrix_command_and_data_Buffer[0], bufferlength);
+                setBuffer((Buffer_void*) dotMatrix_command_and_data_Buffer[1],
                           (void*) &dotMatrix_displayBuffer[currentLine][currentDisplayElement->pos_x],
                           currentDisplayElement->len_x);
-                resetBuffer((Buffer_void*)buffer);
+                resetBuffer((Buffer_void*)dotMatrix_dataBufferBuffer);
                 bufferlength += currentDisplayElement->len_x;
                 currentLine += 1;
                 totalLines -= 1;
 
                 if (totalLines <= 0) {
-                    currentDisplayElement->status &= ~activeBit;
+                    currentDisplayElement->status &= ~dotMatrix_activeBit;
                     currentDisplayElement = 0;
                     currentLine = -1;
                     totalLines = -1;
@@ -162,10 +165,10 @@ DisplayElement* DotMatrix_newDisplayElement(uint8_t xpos, uint8_t ypos, uint8_t 
 	if (ysize > 8) {
 	    furtherlines = (ysize-1) >> 3;
 	}
-	dotMatrix_mem[dotMatrix_size].status |= (baseline << 4) & lineMask;
+	dotMatrix_mem[dotMatrix_size].status |= (baseline << 4) & dotMatrix_lineMask;
 	dotMatrix_mem[dotMatrix_size].status |= furtherlines;
 	if (showInverted) {
-	    dotMatrix_mem[dotMatrix_size].status |= isInverted;
+	    dotMatrix_mem[dotMatrix_size].status |= dotMatrix_isInverted;
 	}
 	dotMatrix_size += 1;
 	return &dotMatrix_mem[dotMatrix_size - 1];
@@ -189,7 +192,7 @@ int8_t DotMatrix_changeElement_inLine(DisplayElement* delm,
         int8_t i = datalen > (delm->len_x - xpos) ? (delm->len_x - xpos) : datalen;
         for (; i>0; i-=1) {
             pos += 1;
-            if (delm->status & isInverted) {
+            if (delm->status & dotMatrix_isInverted) {
                 dotMatrix_displayBuffer[line][delm->pos_x+xpos+pos] = ~data[pos];
             }
             else {
@@ -209,7 +212,7 @@ int8_t DotMatrix_changeElement_inLine(DisplayElement* delm,
         for (; i>0; i-=1) {
             pos += 1;
             dotMatrix_displayBuffer[line][delm->pos_x+xpos+pos] &= ~mask;
-            if (delm->status & isInverted) {
+            if (delm->status & dotMatrix_isInverted) {
                 dotMatrix_displayBuffer[line][delm->pos_x+xpos+pos] |= ( (~(data[pos]<<offset)) & mask );
             }
             else {
@@ -259,7 +262,7 @@ int8_t DotMatrix_changeElement_betweenLines(DisplayElement* delm,
         pos += 1;
 		dotMatrix_displayBuffer[line_upper][delm->pos_x+xpos+pos] &= ~mask_upper;
         dotMatrix_displayBuffer[line_lower][delm->pos_x+xpos+pos] &= ~mask_lower;
-        if (delm->status & isInverted) {
+        if (delm->status & dotMatrix_isInverted) {
             if (line_upper >= 0) {
                 dotMatrix_displayBuffer[line_upper][delm->pos_x+xpos+pos] |= ( (~(data[pos] << offset_upper)) & mask_upper);
             }
@@ -284,9 +287,9 @@ int8_t DotMatrix_scroll(uint8_t line) {
     dotMatrix_displayCommandBuffer[1] = 1;
     dotMatrix_displayCommandBuffer[2] = COMMAND_SETLINE + line;
 
-    setBufferLength((Buffer_void*) command_and_data_Buffer[0], 3);
-    setBufferLength((Buffer_void*) command_and_data_Buffer[1], 0);
-    resetBuffer((Buffer_void*) buffer);
+    setBufferLength((Buffer_void*) dotMatrix_command_and_data_Buffer[0], 3);
+    setBufferLength((Buffer_void*) dotMatrix_command_and_data_Buffer[1], 0);
+    resetBuffer((Buffer_void*) dotMatrix_dataBufferBuffer);
 
     return SR_activateShiftRegister(dotMatrixSR, 3);
 }
@@ -334,8 +337,8 @@ int8_t clearLine(uint8_t mask, uint8_t invert, uint8_t line, uint8_t pos_x, uint
 
 int16_t DotMatrix_cleanElement(DisplayElement* delm) {
     int16_t columns = -1;
-    uint8_t line = (delm->status & lineMask) >> 4;
-    uint8_t linesTodo = (delm->status & additionalLineMask) + 1;
+    uint8_t line = (delm->status & dotMatrix_lineMask) >> 4;
+    uint8_t linesTodo = (delm->status & dotMatrix_additionalLineMask) + 1;
     uint8_t lastLine = line + linesTodo - 1;
     uint8_t upperMask = 0xFF;
     uint8_t lowerMask = 0xFF;
@@ -346,7 +349,7 @@ int16_t DotMatrix_cleanElement(DisplayElement* delm) {
             upperMask <<= 1;
         }
         if (linesTodo > 1) {
-            columns += clearLine(upperMask, delm->status & isInverted, line, delm->pos_x, delm->len_x);
+            columns += clearLine(upperMask, delm->status & dotMatrix_isInverted, line, delm->pos_x, delm->len_x);
             line += 1;
             linesTodo -= 1;
         }
@@ -358,20 +361,20 @@ int16_t DotMatrix_cleanElement(DisplayElement* delm) {
             lowerMask >>= 1;
         }
         if (linesTodo > 1) {
-            columns += clearLine(lowerMask, delm->status & isInverted, lastLine, delm->pos_x, delm->len_x);
+            columns += clearLine(lowerMask, delm->status & dotMatrix_isInverted, lastLine, delm->pos_x, delm->len_x);
             linesTodo -= 1;
         }
     }
 
     if (linesTodo == 1 && columns == -1) {
         upperMask &= lowerMask; // combine both masks
-        return clearLine(upperMask, delm->status & isInverted, line, delm->pos_x, delm->len_x);
+        return clearLine(upperMask, delm->status & dotMatrix_isInverted, line, delm->pos_x, delm->len_x);
     }
 
     for (; linesTodo > 0; linesTodo-=1) {
         uint8_t xpos = delm->len_x;
         for (; xpos > 0; xpos-=1) {
-            columns += clearLine(0xFF, delm->status & isInverted, line, delm->pos_x, delm->len_x);
+            columns += clearLine(0xFF, delm->status & dotMatrix_isInverted, line, delm->pos_x, delm->len_x);
             line += 1;
         }
     }
@@ -382,7 +385,7 @@ int16_t DotMatrix_cleanElement(DisplayElement* delm) {
 int8_t DotMatrix_changeElementN(DisplayElement* delm, int16_t xpos, int16_t ypos, const uint8_t * data, uint8_t datalen)
 {
 
-    if (delm->status & activeBit) {
+    if (delm->status & dotMatrix_activeBit) {
         return -1;
     }
     if (delm->height_y <= ypos || ypos < -7) {
@@ -421,8 +424,8 @@ int8_t DotMatrix_changeElement(DisplayElement* delm, int16_t xpos, int16_t ypos,
 }
 
 void DotMatrix_activateElement(DisplayElement* delm) {
-    delm->status |= activeBit;
-    scheduleTask(task_transferElement);
+    delm->status |= dotMatrix_activeBit;
+    scheduleTask(dotMatrix_task_transferElement);
 }
 
 #endif /* DOTMATRIX_MEMSIZE */

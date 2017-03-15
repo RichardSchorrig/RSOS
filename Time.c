@@ -6,11 +6,10 @@
  */
 
 #include "Time.h"
+
+#ifdef MAXTIMERS
 #include "input/Buttons.h"
 #include <msp430.h>
-
-//static Task dummyTask;
-
 
 /**
  * status bit field:
@@ -111,3 +110,4 @@ void waitScheduler()
 	}
 }
 
+#endif /* MAXTIMERS */

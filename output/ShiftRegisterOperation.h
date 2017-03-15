@@ -16,6 +16,8 @@
 #include <stdint.h>
 #include "../Task.h"
 #include "../buffer/BasicBuffer.h"
+#include "../buffer/Buffer_int8.h"
+#include "../buffer/BufferBuffer_int8.h"
 
 /* exclude everything if not used */
 #ifdef MAXSHIFTREGISTER
@@ -49,7 +51,13 @@ typedef struct ShiftRegisterOperation_t {
 
 extern ShiftRegisterOperation shiftRegisterOperation_mem[MAXSHIFTREGISTER];
 extern int8_t shiftRegisterOperation_size;
-
+/*
+extern int8_t activeShiftRegister;
+extern int8_t lastActiveShiftRegister;
+extern volatile unsigned char * SR_SPIinterface_readAddress;
+extern volatile unsigned char * SR_SPIinterface_writeAddress;
+extern Task* task_strobe;
+*/
 /**
  * strobe is activatet on end of transfer
  * a short square signal is initiated

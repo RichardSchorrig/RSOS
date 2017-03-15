@@ -22,6 +22,7 @@
 #include <RSOSDefines.h>
 
 #include <stdint.h>
+#include <msp430.h>
 
 /**
  * bit identifier: active
@@ -176,11 +177,13 @@ void restoreCurrentContext();
 
 /**
  * sets a task active, it is executed when the scheduler is working
+ * This function disables and enables all interrupts within execution
  * @param task: pointer to the task that should be scheduled
  */
 static inline void scheduleTask(Task* task);
 static void scheduleTask(Task* task)
 {
+//    _DINT();
     if (~task->status & Task_isActive)
     {
         task->status |= Task_isActive;
@@ -191,6 +194,7 @@ static void scheduleTask(Task* task)
             currentPriority = (task->status & priorityMask);        //maximum priority of running task
         }
     }
+//    _EINT();
 }
 
 /**

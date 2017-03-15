@@ -346,7 +346,7 @@ void task_stepTask()
 		// add some cycle (it doesn't matter how many cycles since it is repeated and checked each time
 		task_mem[currentRunningTask].currentCycle = 2;
 	#ifdef STEPPER_SHIFTREGISTER
-		noSROperation = SR_activateShiftRegister(stepperShiftRegister, 1);
+		noSROperation = SR_enableTransmission(stepperShiftRegister, 1);
 	#else
 	#endif /* STEPPER_SHIFTREGISTER */
 	}

@@ -118,7 +118,7 @@ void initButtonOperation(uint16_t clockMultiply);
  * If a pin interrupt is received, the interrupt is disabled for that pin.
  * after waitTime ticks it will be enabled again.
  *
- * Call initButtonOperation first!
+ * Call initButtonOperation() first!
  *
  * @param bit: the bit the pin is at
  * @param port: the port the pin is at
@@ -200,7 +200,7 @@ static void buttonPressed(Button* button) {
 
 /**
  * the button wait scheduler
- * checks all buttons and takes care of the interupt enable registers
+ * checks all buttons and takes care of the interrupt enable registers
  */
 void buttonWaitScheduler();
 
