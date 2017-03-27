@@ -75,7 +75,7 @@ static int8_t set_getNext_uint8(Buffer_uint8* buffer, volatile uint8_t* source, 
     }
 
     if (source != 0) {
-        buffer->buffer[buffer->size.readBytes-1] = *source;
+        buffer->buffer[buffer->size.readBytes] = *source;
     }
 
     buffer->size.readBytes++;
