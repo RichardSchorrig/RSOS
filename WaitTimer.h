@@ -11,10 +11,15 @@
  *      refactoring: splitting WaitTimer and Button, changed task reference to number
  * 2017 03 05
  *      inlining functions setTimer(), haltTimer(), continueTimer()
+ * 2017 03 31
+ * 		changed function setTimer(): now checks if active, activates task on start only
+ * 		if status is inactive
+ * 		changed function stopTimer(): deactivates timer before activating again to comply
+ * 		with changes to setTimer()
  */
 
-#ifndef TIME_H_
-#define TIME_H_
+#ifndef WAITTIMER_H_
+#define WAITTIMER_H_
 
 #include "Task.h"
 #include <RSOSDefines.h>
@@ -132,22 +137,25 @@ void setTimerCyclic(WaitTimer* waitTimer);
 
 /**
  * sets the specified timer active to count
+ * will activate the task on start if the timer is not running
  * @param waitTimer: the timer to set active
  */
 static inline void setTimer(WaitTimer* waitTimer);
 static void setTimer(WaitTimer* waitTimer)
 {
-//  if (waitTimer->status & taskIsOnStart)
-    if (waitTimer->taskOnStart != -1)
-    {
-        scheduleTask(&task_mem[waitTimer->taskOnStart]);
-    }
-    switch (waitTimer->status & exponentMask) {
-    case WaitTimer_exponent_0: waitTimer->currentWaitTime = waitTimer->status & timer_waitTimeMask; break;
-    case WaitTimer_exponent_2: waitTimer->currentWaitTime = (waitTimer->status & timer_waitTimeMask) << 2; break;
-    case WaitTimer_exponent_4: waitTimer->currentWaitTime = (waitTimer->status & timer_waitTimeMask) << 4; break;
-    }
-    waitTimer->status |= WaitTimer_isActive;
+	if (!(waitTimer->status & WaitTimer_isActive))
+	{
+		if (waitTimer->taskOnStart != -1)
+		{
+			scheduleTask(&task_mem[waitTimer->taskOnStart]);
+		}
+		switch (waitTimer->status & exponentMask) {
+		case WaitTimer_exponent_0: waitTimer->currentWaitTime = waitTimer->status & timer_waitTimeMask; break;
+		case WaitTimer_exponent_2: waitTimer->currentWaitTime = (waitTimer->status & timer_waitTimeMask) << 2; break;
+		case WaitTimer_exponent_4: waitTimer->currentWaitTime = (waitTimer->status & timer_waitTimeMask) << 4; break;
+		}
+		waitTimer->status |= WaitTimer_isActive;
+	}
 }
 
 /**
@@ -174,4 +182,4 @@ static void continueTimer(WaitTimer* waitTimer)
 void waitScheduler();
 
 #endif /* MAXTIMERS */
-#endif /* TIME_H_ */
+#endif /* WAITTIMER_H_ */

@@ -5,27 +5,9 @@
  *      Author: Richard
  */
 
-#include "Time.h"
+#include "WaitTimer.h"
 
 #ifdef MAXTIMERS
-#include "input/Buttons.h"
-#include <msp430.h>
-
-/**
- * status bit field:
- * ACSEWWWWWWWWBxxx
- * A: is active
- * C: is cyclic
- * S: Task on start
- * E: Task on end
- * WWWWWWWW: wait time (0..254)
- * B: button connected
- * xxx: number of the connected button (0..7)
- */
-//static const unsigned int connectedButtonMask = 0x0007;
-//static const unsigned int buttonConnected = 0x0008;
-//static const unsigned int taskIsOnStart = 0x2000;
-//static const unsigned int taskIsOnEnd = 0x1000;
 
 inline uint16_t Timer_getExponentAndTime(uint16_t time);
 uint16_t Timer_getExponentAndTime(uint16_t time) {
@@ -60,11 +42,11 @@ void stopTimer(WaitTimer* waitTimer) {
     if (waitTimer->taskOnStop != -1) {
         scheduleTask(&task_mem[waitTimer->taskOnStop]);
     }
+
+    waitTimer->status &= ~WaitTimer_isActive;
+
     if (waitTimer->status & WaitTimer_isCyclicTimer) {
         setTimer(waitTimer);
-    }
-    else {
-        waitTimer->status &= ~WaitTimer_isActive;
     }
 }
 
