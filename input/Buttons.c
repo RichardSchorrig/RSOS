@@ -10,11 +10,10 @@
 /* exclude everything if not used */
 #ifdef MAXBUTTONS
 
-static Task* task_buttonWaitScheduler = 0;
-static WaitTimer* timer_buttonWaitScheduler = 0;
+WaitTimer* timer_buttonWaitScheduler = 0;
 
 void initButtonOperation(uint16_t clockMultiply) {
-    task_buttonWaitScheduler = addTask(0, buttonWaitScheduler);
+	Task* task_buttonWaitScheduler = addTask(0, buttonWaitScheduler);
     timer_buttonWaitScheduler = initWaitTimer(clockMultiply);
 
     setTimerCyclic(timer_buttonWaitScheduler);
@@ -49,6 +48,7 @@ Button* initButton(unsigned char bit, volatile unsigned char * port, uint8_t wai
 
 	buttons_size += 1;
 
+	/*
 	if (port == &P1IN)
 	{
 		P1DIR &= ~bit;
@@ -61,7 +61,7 @@ Button* initButton(unsigned char bit, volatile unsigned char * port, uint8_t wai
 		P2IE |= bit;
 		P2IES |= bit;
 	}
-
+	*/
 	return &buttons_mem[buttons_size-1];
 }
 
@@ -80,10 +80,13 @@ void addTaskOnReleaseToButton(Button* button, Task* task)
 inline void enableBtnInterrupt(Button* btn);
 void enableBtnInterrupt(Button* btn)
 {
+	setPortInterrupt(btn->port, btn->bit, 1);
+	/*
 	if (btn->port == &P1IN)
 	{P1IE |= btn->bit;}
 	else if (btn->port == &P2IN)
 	{P2IE |= btn->bit;}
+	*/
 }
 
 static inline void buttonReleased(Button* button);
@@ -96,12 +99,13 @@ static void buttonReleased(Button* button) {
 }
 
 void buttonWaitScheduler() {
-    uint8_t i;
+    int8_t i;
+    uint8_t noButtons = 0;
     Button* btn;
     for (i=buttons_size; i>0; i-=1) {
         btn = &buttons_mem[i-1];
-        if (btn->status & Button_isActive) {
-
+        if (buttons_mem[i-1].status & Button_isActive) {
+        	btn = &buttons_mem[i-1];
             if (btn->currentWaitTime == 0 || btn->currentWaitTime == 255) {    //wait time is over
 
                 if (*(btn->port) & btn->bit) {  //button is not pressed
@@ -120,7 +124,17 @@ void buttonWaitScheduler() {
                 btn->currentWaitTime -= 1;
             }
         }
+        else
+        {
+        	noButtons += 1;
+        }
     }
+
+    if (noButtons >= buttons_size)
+    {
+    	haltTimer(timer_buttonWaitScheduler);	// end operation
+    }
+
 }
 
 #endif /* MAXBUTTONS */

@@ -6,7 +6,7 @@
  */
 
 #include "SevenSegmentDisplay.h"
-#include "ShiftRegisterOperation.h"
+#include "../SerialInterface/SPIOperation.h"
 
 /* exclude everything if not used */
 #ifdef SEVENSEGMENTDIGITS

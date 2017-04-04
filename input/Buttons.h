@@ -11,21 +11,35 @@
  *      refactoring: splitting button and waitTimer, changed task reference to number
  * 2017 03 08
  *      moved inline functions to header file
+ * 2017 03 31
+ * 		changed function buttonWaitScheduler(): checks if any button is active, if not, the timer
+ * 		calling the buttonWaitScheduler is halted
+ * 		changed function buttonPressed(): calls setTimer() to activate the waitTimer calling the button
+ * 		wait scheduler
+ * 		changed function initButton(): no changes to the port is done (past: port pin was put to input direction,
+ * 		interrupt enabled etc)
+ * 		changed function disableBtnInterrupt() and enableBtnInterrupt(): now call setPortInterrupt() in the
+ * 		hardware adaption layer
  */
 
 #ifndef BUTTONS_H_
 #define BUTTONS_H_
 
-#include "../Task.h"
-#include "../Time.h"
-#include <RSOSDefines.h>
 
-#include <msp430.h>
+#include <RSOSDefines.h>
 
 #include <stdint.h>
 
 /* exclude everything if not used */
 #ifdef MAXBUTTONS
+
+#include "../Task.h"
+#include "../WaitTimer.h"
+#include <HardwareAdaptionLayer.h>
+
+extern WaitTimer* timer_buttonWaitScheduler;
+
+//#include <msp430.h>
 
 struct Button_t;
 
@@ -59,7 +73,6 @@ typedef struct Button_t{
 } Button;
 
 extern char buttons_size;
-//extern Button* buttons_mem;
 extern Button buttons_mem[MAXBUTTONS];
 
 /**
@@ -113,10 +126,12 @@ static const uint8_t button_waitTimeMask = 0x0F;
 void initButtonOperation(uint16_t clockMultiply);
 
 /**
- * Inits a Pin to be an input, with direction set to input,
- * interrupt enabled, and interrupt edge select to from high to low
- * If a pin interrupt is received, the interrupt is disabled for that pin.
- * after waitTime ticks it will be enabled again.
+ * inits a button to handle the port interrupt when pressed.
+ * Does not initialize the port to be input direction etc.
+ *
+ * when buttonPressed() is called, a scheduler is activated which
+ * checks if the button is held down and controls the debouncing of
+ * the input pin
  *
  * Call initButtonOperation() first!
  *
@@ -157,10 +172,13 @@ void addTaskOnReleaseToButton(Button* button, Task* task);
 static inline void disableBtnInterrupt(Button* btn);
 static void disableBtnInterrupt(Button* btn)
 {
+	setPortInterrupt(btn->port, btn->bit, 0);
+	/*
     if (btn->port == &P1IN)
     {P1IE &= ~btn->bit;}
     else if (btn->port == &P2IN)
     {P2IE &= ~btn->bit;}
+    */
 }
 
 /**
@@ -191,11 +209,12 @@ static void buttonPressed(Button* button) {
     if ((~button->status) & Button_isActive) {
         disableBtnInterrupt(button);
         Button_setWaitTime(button);
-        if (button->status & Button_taskOnPress && button->task != -1) {
+        if ((button->status & Button_taskOnPress) && (button->task != -1)) {
             scheduleTask(&task_mem[button->task]);
         }
         button->status |= Button_isActive;
     }
+    setTimer(timer_buttonWaitScheduler);
 }
 
 /**

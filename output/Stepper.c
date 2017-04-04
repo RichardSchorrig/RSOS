@@ -10,6 +10,12 @@
 /* exclude everything if not used */
 #ifdef MAXSTEPPER
 
+#if MAXSTEPPER > 1
+#define STEPPER_BUFFERSIZE (MAXSTEPPER/2)
+#else
+#define STEPPER_BUFFERSIZE 1
+#endif /* MAXSTEPPER */
+
 uint8_t stepper_buffer[STEPPER_BUFFERSIZE];
 BufferBuffer_uint8* buffer;
 
@@ -18,7 +24,7 @@ void initStepperOperation(volatile uint8_t * port, uint8_t pin)
 {
     Buffer_uint8* buf = (Buffer_uint8*) initBuffer((void*) stepper_buffer, STEPPER_BUFFERSIZE);
     buffer = (BufferBuffer_uint8*) initBuffer((void*) &buf, 1);
-	stepperShiftRegister = SR_initShiftRegister(pin, port, buffer, STEPPER_BUFFERSIZE);
+	stepperShiftRegister = SPI_initSPIOperation(pin, port, buffer, STEPPER_BUFFERSIZE);
 	stepTask = addTask(0, task_stepTask);
 	setTaskCyclic(stepTask, 4);
 }
@@ -346,7 +352,7 @@ void task_stepTask()
 		// add some cycle (it doesn't matter how many cycles since it is repeated and checked each time
 		task_mem[currentRunningTask].currentCycle = 2;
 	#ifdef STEPPER_SHIFTREGISTER
-		noSROperation = SR_enableTransmission(stepperShiftRegister, 1);
+		noSROperation = SPI_activateSPIOperation(stepperShiftRegister, 1);
 	#else
 	#endif /* STEPPER_SHIFTREGISTER */
 	}

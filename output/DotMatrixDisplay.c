@@ -10,10 +10,10 @@
 /* exclude everything if not used */
 #ifdef DOTMATRIX_MEMSIZE
 
-#include "ShiftRegisterOperation.h"
+#include "../SerialInterface/SPIOperation.h"
 #include <DisplayHardware.h>
 
-ShiftRegisterOperation* dotMatrixSR;
+SPIOperation* dotMatrixSR;
 
 static const uint16_t dotMatrix_activeBit = 0x8000;
 static const uint16_t dotMatrix_isInverted = 0x4000;
@@ -39,7 +39,7 @@ void DotMatrix_initDisplay(volatile uint8_t * port, uint8_t pin)
     dotMatrix_command_and_data_Buffer[0] = (Buffer_uint8*) initBuffer((void*)dotMatrix_displayCommandBuffer, 10);
     dotMatrix_command_and_data_Buffer[1] = (Buffer_uint8*) initBuffer((void*)&dotMatrix_displayBuffer[0][0], DOTMATRIX_DISPLAY_XRES);
     dotMatrix_dataBufferBuffer = (BufferBuffer_uint8*) initBuffer((void*) dotMatrix_command_and_data_Buffer, 2);
-	dotMatrixSR = SR_initShiftRegister(pin, port, dotMatrix_dataBufferBuffer, DOTMATRIX_DISPLAY_XRES + 10);
+	dotMatrixSR = SPI_initSPIOperation(pin, port, dotMatrix_dataBufferBuffer, DOTMATRIX_DISPLAY_XRES + 10);
 
 	dotMatrix_task_transferElement = addTask(1, DotMatrix_transferElement);
 	setTaskCyclic(dotMatrix_task_transferElement, 2);
@@ -56,7 +56,7 @@ void DotMatrix_initDisplay(volatile uint8_t * port, uint8_t pin)
 	setBufferLength((Buffer_void*) dotMatrix_command_and_data_Buffer[0], 8);
 	setBufferLength((Buffer_void*) dotMatrix_command_and_data_Buffer[1], 0);
 
-	SR_activateShiftRegister(dotMatrixSR, 8);   //todo: check return value, might not be activated
+	SPI_activateSPIOperation(dotMatrixSR, 8);   //todo: check return value, might not be activated
 }
 
 /*
@@ -137,7 +137,7 @@ void DotMatrix_transferElement() {
                     totalLines = -1;
                 }
 
-                noSROperation = SR_activateShiftRegister(dotMatrixSR, bufferlength);
+                noSROperation = SPI_activateSPIOperation(dotMatrixSR, bufferlength);
             }
 
             task_mem[currentRunningTask].currentCycle = 2;
@@ -147,7 +147,7 @@ void DotMatrix_transferElement() {
     {
         // add some cycle (it doesn't matter how many cycles since it is repeated and checked each time
         task_mem[currentRunningTask].currentCycle = 2;
-        noSROperation = SR_activateShiftRegister(dotMatrixSR, bufferlength);
+        noSROperation = SPI_activateSPIOperation(dotMatrixSR, bufferlength);
     }
 }
 
@@ -291,7 +291,7 @@ int8_t DotMatrix_scroll(uint8_t line) {
     setBufferLength((Buffer_void*) dotMatrix_command_and_data_Buffer[1], 0);
     resetBuffer((Buffer_void*) dotMatrix_dataBufferBuffer);
 
-    return SR_activateShiftRegister(dotMatrixSR, 3);
+    return SPI_activateSPIOperation(dotMatrixSR, 3);
 }
 
 int8_t DotMatrix_CleanDisplay() {

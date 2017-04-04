@@ -22,32 +22,33 @@
 #include <RSOSDefines.h>
 
 #include <stdint.h>
-#include <msp430.h>
+
+//#include <msp430.h>
 
 /**
  * bit identifier: active
  */
-static const unsigned int Task_isActive = 0x8000;
+static const uint16_t Task_isActive = 0x8000;
 
 /**
  * bit identifier: task has follow up tasks
  */
-static const unsigned int followUpNumberMask = 0x7000;  //new, check
+static const uint16_t followUpNumberMask = 0x7000;
 
 /**
  * bit identifier: is cyclic
  */
-static const unsigned int isCycleTask = 0x0800;
+static const uint16_t isCycleTask = 0x0800;
 
 /**
- *
+ * mask for the number of cycles
  */
-static const unsigned int cycleNumberMask = 0x0700;
+static const uint16_t cycleNumberMask = 0x0700;
 
-static const unsigned int hasWaitTime = 0x0080;
-static const unsigned int waitTimeMask = 0x0070;
+static const uint16_t hasWaitTime = 0x0080;
+static const uint16_t waitTimeMask = 0x0070;
 
-static const unsigned int priorityMask = 0x000F;
+static const uint16_t priorityMask = 0x000F;
 
 /**
  * type definition of the function executed when task is scheduled
@@ -131,11 +132,13 @@ extern uint8_t numberOfRunningTasks;
 Task* addTask(unsigned char priority, TaskFunction* taskfunction);
 
 /**
- * adds a task that is executed when the parents task is completed
- * it is possible to add up to three following tasks to one task
+ * adds a task that is executed when the parent task is completed
+ * it is possible to add up to 7 following tasks to one task
  * @param task: the position of the parent task in the tasks-array
- * @param followUpArray: a pointer to an initialized Array where the followup tasks are stored.
- *        might be null, but only if a valid array was added prior
+ * @param followUpArray: a pointer to an initialized Array where the follow up tasks are stored.
+ *        might be null, but only if a valid array was added prior. The Array must contain enough space
+ *        for the number of tasks to be added as follow up task. Calling the function with a different
+ *        pointer than the prior pointer has no effect.
  * @param followUpTask: the position of the following task in the tasks-array
  */
 void addFollowUpTask(Task* task, Task* *followUpArray, Task* followUpTask);
@@ -183,8 +186,7 @@ void restoreCurrentContext();
 static inline void scheduleTask(Task* task);
 static void scheduleTask(Task* task)
 {
-//    _DINT();
-    if (~task->status & Task_isActive)
+    if (!(task->status & Task_isActive))
     {
         task->status |= Task_isActive;
         numberOfRunningTasks += 1;
@@ -194,7 +196,6 @@ static void scheduleTask(Task* task)
             currentPriority = (task->status & priorityMask);        //maximum priority of running task
         }
     }
-//    _EINT();
 }
 
 /**

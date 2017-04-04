@@ -25,16 +25,16 @@
 #define STEPPER_MAXSTEPS 160
 
 #include <RSOSDefines.h>
+
+/* exclude everything if not used */
+#ifdef MAXSTEPPER
 #include <msp430.h>
 #include <stdint.h>
 
 
 #include <RSOSDefines.h>
 #include "../Task.h"
-#include "ShiftRegisterOperation.h"
-
-/* exclude everything if not used */
-#ifdef MAXSTEPPER
+#include "../SerialInterface/SPIOperation.h"
 
 typedef struct stepper_pins_t{
 	unsigned char port;
@@ -93,7 +93,7 @@ extern int8_t stepper_size;
 #ifdef STEPPER_SHIFTREGISTER
 //extern uint8_t stepper_buffer[STEPPER_BUFFERSIZE];
 //extern uint8_t stepper_bufferPosition;
-ShiftRegisterOperation* stepperShiftRegister;
+SPIOperation* stepperShiftRegister;
 #endif /* STEPPER_SHIFTREGISTER */
 
 /**
