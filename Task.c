@@ -80,31 +80,36 @@ void resetDelay(Task* task)
 	task->currentDelay = ((task->status & waitTimeMask) >> 4) + 1;
 }
 
-inline void resetCycles(Task* task);
-void resetCycles(Task* task)
+static inline void resetCycles(Task* task) __attribute__((always_inline));
+static inline void resetCycles(Task* task)
 {
 	task->currentCycle = ((task->status & cycleNumberMask) >> 8) + 1;
 }
 
-static inline void unscheduleTask(Task* task);
-static void unscheduleTask(Task* task)
+static inline void unscheduleTask(Task* task) __attribute__((always_inline));
+static inline void unscheduleTask(Task* task)
 {
     if (task->status & Task_isActive) {
-        numberOfRunningTasks -= 1;
         task->status &= ~Task_isActive;
+        numberOfRunningTasks -= 1;
         currentPriority = 0;
     }
 
-	signed char i = ((task->status & followUpNumberMask) >> 12) - 1;
-	for (; i>=0; i--)
-	{
-		scheduleTask(task->followUpTask[i]);
-	}
+    if (task->followUpTask != 0)
+    {
+        signed char i = ((task->status & followUpNumberMask) >> 12) - 1;
+        for (; i>0; i--)
+        {
+            scheduleTask(task->followUpTask[i-1]);
+        }
+    }
 
-	if (task->status & hasWaitTime)
-	{
-		resetDelay(task);
-	}
+#ifndef NEWSCHEDULER
+    if (task->status & hasWaitTime)
+    {
+        resetDelay(task);
+    }
+#endif /* NEWSCHEDULER */
 }
 
 void saveCurrentContext()
@@ -124,28 +129,29 @@ void restoreCurrentContext()
  * returns the task that is active and has the highest priority
  * @return a number in the task_mem array or -1 if no task is active
  */
-static inline int8_t getNextTaskNumber();
-static int8_t getNextTaskNumber()
+static inline int8_t getNextTaskNumber() __attribute__((always_inline));
+static inline int8_t getNextTaskNumber()
 {
 	int8_t i;
 	int8_t maxPrioTask = -1;
+	numberOfRunningTasks = 0;
 	for (i=tasks_size; i>0; i-=1)
 	{
 		if (task_mem[i-1].status & Task_isActive)
 		{
+		    numberOfRunningTasks += 1;
 			int8_t prio = task_mem[i-1].status & priorityMask;
 			if ( (prio) >= currentPriority)
 			{
 				maxPrioTask = i-1;
-				currentPriority = task_mem[i-1].status & priorityMask;
+				currentPriority = prio;
 			}
 		}
 	}
 	return maxPrioTask;
 }
 
-#define STRADEGY_NOWAIT
-
+#ifdef NEWSCHEDULER
 void scheduler()
 {
 	while (numberOfRunningTasks || task_schedulerEnabled)
@@ -203,9 +209,8 @@ void scheduler()
 		schedulerWait();
 	}
 }
-
 // old scheduler function
-/*
+#else
 void scheduler()
 {
 	while (numberOfRunningTasks || task_schedulerEnabled)
@@ -263,5 +268,5 @@ void scheduler()
 //		__bis_SR_register(LPM3_bits + GIE);       // Enter LPM3 w/ interrupt
 	}
 }
-*/
+#endif /* NEWSCHEDULER */
 

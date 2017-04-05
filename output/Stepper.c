@@ -17,14 +17,16 @@
 #endif /* MAXSTEPPER */
 
 uint8_t stepper_buffer[STEPPER_BUFFERSIZE];
-BufferBuffer_uint8* buffer;
+
+Buffer_uint8* buffer[1];
+BufferBuffer_uint8* bufferbuffer;
 
 #ifdef STEPPER_SHIFTREGISTER
 void initStepperOperation(volatile uint8_t * port, uint8_t pin)
 {
-    Buffer_uint8* buf = (Buffer_uint8*) initBuffer((void*) stepper_buffer, STEPPER_BUFFERSIZE);
-    buffer = (BufferBuffer_uint8*) initBuffer((void*) &buf, 1);
-	stepperShiftRegister = SPI_initSPIOperation(pin, port, buffer, STEPPER_BUFFERSIZE);
+    buffer[0] = (Buffer_uint8*) initBuffer((void*) stepper_buffer, STEPPER_BUFFERSIZE);
+    bufferbuffer = (BufferBuffer_uint8*) initBuffer((void*) buffer, 1);
+	stepperShiftRegister = SPI_initSPIOperation(pin, port, bufferbuffer, STROBE_ON_TRANSFER_END | STROBE_POLARITY_HIGH);
 	stepTask = addTask(0, task_stepTask);
 	setTaskCyclic(stepTask, 4);
 }

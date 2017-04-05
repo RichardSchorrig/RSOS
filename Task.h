@@ -19,6 +19,12 @@
 #ifndef TASK_H_
 #define TASK_H_
 
+/**
+ * compile flags
+ */
+#define STRADEGY_NOWAIT
+#define NEWSCHEDULER
+
 #include <RSOSDefines.h>
 
 #include <stdint.h>
@@ -160,8 +166,8 @@ void setTaskDelay(Task* task, char delay);
 /**
  * @return: the number of the task in the task_mem array, -1 on error
  */
-static inline int8_t getTaskNumber(Task* task);
-static int8_t getTaskNumber(Task* task) {
+static inline int8_t getTaskNumber(Task* task) __attribute__((always_inline));
+static inline int8_t getTaskNumber(Task* task) {
     if (task-task_mem > tasks_size) {
         return -1;
     }
@@ -183,9 +189,15 @@ void restoreCurrentContext();
  * This function disables and enables all interrupts within execution
  * @param task: pointer to the task that should be scheduled
  */
-static inline void scheduleTask(Task* task);
-static void scheduleTask(Task* task)
+static inline void scheduleTask(Task* task) __attribute__((always_inline));
+static inline void scheduleTask(Task* task)
 {
+#ifdef NEWSCHEDULER
+    if (!(task->status & Task_isActive))
+    {
+        task->status |= Task_isActive;
+    }
+#else
     if (!(task->status & Task_isActive))
     {
         task->status |= Task_isActive;
@@ -196,6 +208,7 @@ static void scheduleTask(Task* task)
             currentPriority = (task->status & priorityMask);        //maximum priority of running task
         }
     }
+#endif /* NEWSCHEDULER */
 }
 
 /**

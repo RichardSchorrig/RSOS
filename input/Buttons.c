@@ -18,7 +18,7 @@ void initButtonOperation(uint16_t clockMultiply) {
 
     setTimerCyclic(timer_buttonWaitScheduler);
     setTaskOnStop(timer_buttonWaitScheduler, task_buttonWaitScheduler);
-    setTimer(timer_buttonWaitScheduler);
+//    setTimer(timer_buttonWaitScheduler);
 }
 
 inline uint8_t Button_getExponentAndTime(uint8_t time);
@@ -98,7 +98,10 @@ static void buttonReleased(Button* button) {
     button->status &= ~Button_isActive;
 }
 
+#include <msp430.h>
 void buttonWaitScheduler() {
+    buttonSchedulerEntered();
+
     int8_t i;
     uint8_t noButtons = 0;
     Button* btn;
@@ -135,6 +138,7 @@ void buttonWaitScheduler() {
     	haltTimer(timer_buttonWaitScheduler);	// end operation
     }
 
+    buttonSchedulerExited();
 }
 
 #endif /* MAXBUTTONS */

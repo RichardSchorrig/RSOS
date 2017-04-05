@@ -72,7 +72,7 @@ typedef struct Button_t{
 	int8_t task;
 } Button;
 
-extern char buttons_size;
+extern int8_t buttons_size;
 extern Button buttons_mem[MAXBUTTONS];
 
 /**
@@ -206,7 +206,7 @@ static void Button_setWaitTime(Button* btn) {
  */
 static inline void buttonPressed(Button* button);
 static void buttonPressed(Button* button) {
-    if ((~button->status) & Button_isActive) {
+    if (!(button->status & Button_isActive)) {
         disableBtnInterrupt(button);
         Button_setWaitTime(button);
         if ((button->status & Button_taskOnPress) && (button->task != -1)) {

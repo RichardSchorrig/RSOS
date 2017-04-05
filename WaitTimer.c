@@ -6,6 +6,7 @@
  */
 
 #include "WaitTimer.h"
+#include <HardwareAdaptionLayer.h>
 
 #ifdef MAXTIMERS
 
@@ -69,8 +70,11 @@ void setTimerCyclic(WaitTimer* waitTimer)
 	waitTimer->status |= WaitTimer_isCyclicTimer;
 }
 
+#include <msp430.h>
 void waitScheduler()
 {
+    waitSchedulerEntered();
+
 	signed char i;
 	WaitTimer* wT;
 	for (i=timers_size; i>0; i--)
@@ -90,6 +94,8 @@ void waitScheduler()
 			}
 		}
 	}
+
+	waitSchedulerExited();
 }
 
 #endif /* MAXTIMERS */

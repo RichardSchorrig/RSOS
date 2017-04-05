@@ -95,7 +95,7 @@ typedef struct WaitTimer_t{
 	int8_t taskOnStop;
 } WaitTimer;
 
-extern char timers_size;
+extern int8_t timers_size;
 extern WaitTimer waitTimers_mem[MAXTIMERS];
 
 /**

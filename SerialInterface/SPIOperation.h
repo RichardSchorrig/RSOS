@@ -9,6 +9,12 @@
  *
  *  2017 04 02
  *      renamed files, renamed structures, functions etc to SPIOperation
+ *
+ *  2017 04 04
+ *      changed the strobe operation to be dynamic for each SPIOperation, added more strobe types
+ *
+ *  2017 04 05
+ *      todo: add priority to SPIOperations, dynamic spi scheduler that checks for active spiops by itself
  */
 
 #ifndef SHIFTREGISTEROPERATION_H_
@@ -33,7 +39,8 @@ extern int8_t g_SPI_activeTransmission;
 extern int8_t g_SPI_lastActiveTransmission;
 
 extern Task* g_SPI_task_activateShiftRegister;
-extern Task* g_SPI_task_strobe;
+extern Task* g_SPI_task_strobeSet;
+extern Task* g_SPI_task_strobeReset;
 
 typedef struct SPIStrobe_t {
     uint8_t pin;
@@ -44,7 +51,12 @@ typedef struct SPIStrobe_t {
  * Shift Register Operation structure
  *  Fields:
  *      buffer: a pointer to a buffer array
- *      bufferLength: the length of the buffer
+ *      spiOperation: indicates the type of strobe signal:
+ *              - short strobe on start
+ *              - short strobe on end
+ *              - strobe while transmission is active
+ *              - no strobe signal
+ *          the strobe polarity can be selected: active high or active low
  *      bytesReceived: the number of bytes received while this SR is active, is reset to 0 when activated
  *      bytesToProcess: the number of bytes left to be written, is set when activated
  *      strobePin: structure with the pin and port to set
@@ -54,7 +66,7 @@ typedef struct SPIStrobe_t {
  */
 typedef struct SPIOperation_t {
     BufferBuffer_uint8* bufferbuffer;
-	uint8_t bufferLength;
+	uint8_t strobeOperation;
 	uint8_t bytesReceived;
 	uint8_t bytesToProcess;
 	SPIStrobe strobePin;
@@ -74,19 +86,31 @@ extern Task* task_strobe;
  * strobe is activated on end of transfer
  * a short square signal is initiated
  */
-#define STROBE_ON_TRANSFER_END 0x00
+#define STROBE_ON_TRANSFER_END 0x10
+
+/**
+ * strobe is activated on start of transfer
+ * a short square signal is initiated that will be deactivated
+ * when transmission is active
+ */
+#define STROBE_ON_TRANSFER_START 0x20
 
 /**
  * strobe is activated on start of transfer and held till end
  * a long square signal is generated during the whole transmission
  */
-#define STROBE_ON_TRANSFER_START 0xF0
+#define STROBE_ON_TRANSFER 0x40
+
+/**
+ * no strobe signal is put out
+ */
+#define STROBE_NO_STROBE 0x00
 
 /**
  * strobe polarity active high
  * strobe active is logic high, strobe inactive is pulled low
  */
-#define STROBE_POLARITY_HIGH 0x0F
+#define STROBE_POLARITY_HIGH 0x01
 
 /**
  * strobe polarity active low
@@ -99,7 +123,7 @@ extern Task* task_strobe;
  * MSP Devices: something like UCA0TXBUF
  */
 static inline void SPI_initWriteAddress(volatile unsigned char * address);
-static void SPI_initWriteAddress(volatile unsigned char * address)
+static inline void SPI_initWriteAddress(volatile unsigned char * address)
 {
     SR_SPIinterface_writeAddress = address;
 }
@@ -109,7 +133,7 @@ static void SPI_initWriteAddress(volatile unsigned char * address)
  * MSP Devices: something like UCA0RXBUF
  */
 static inline void SPI_initReadAddress(volatile unsigned char * address);
-static void SPI_initReadAddress(volatile unsigned char * address)
+static inline void SPI_initReadAddress(volatile unsigned char * address)
 {
     SR_SPIinterface_readAddress = address;
 }
@@ -117,11 +141,11 @@ static void SPI_initReadAddress(volatile unsigned char * address)
 /**
  * initialize the SPI Operation with the read and write address
  * of the SPI interface
- * Needs a total of 2 Tasks to operate, consider 2 extra task in RSOSDefines.h
+ * Needs a total of 3 Tasks to operate, consider 3 extra task in RSOSDefines.h
  * @param writeAddress: the address bytes are written into the interface
  * @param readAddress: the address to read from the interface
  */
-void SPI_initOperation(volatile unsigned char * writeAddress, volatile unsigned char * readAddress, uint8_t strobeOperation);
+void SPI_initOperation(volatile unsigned char * writeAddress, volatile unsigned char * readAddress);
 
 /**
  * creates a new SPI operation structure
@@ -131,7 +155,7 @@ void SPI_initOperation(volatile unsigned char * writeAddress, volatile unsigned 
  * @param bufferLength: the maximum length of the buffer
  * @return: the initialized structure pointer
  */
-SPIOperation* SPI_initSPIOperation(uint8_t strobePin, volatile uint8_t * strobePort, BufferBuffer_uint8* bufferbuffer, uint8_t bufferLength);
+SPIOperation* SPI_initSPIOperation(uint8_t strobePin, volatile uint8_t * strobePort, BufferBuffer_uint8* bufferbuffer, uint8_t strobeOperation);
 
 /**
  * interrupt service routine call
@@ -140,7 +164,7 @@ SPIOperation* SPI_initSPIOperation(uint8_t strobePin, volatile uint8_t * strobeP
  * @return -1 in case no byte is written, 1 in case byte was available
  */
 static inline int8_t SPI_nextByte_ActiveShiftRegister();
-static int8_t SPI_nextByte_ActiveShiftRegister()
+static inline int8_t SPI_nextByte_ActiveShiftRegister()
 {
     int8_t retVal = -1;
     if (g_SPI_activeTransmission != -1)
@@ -155,9 +179,18 @@ static int8_t SPI_nextByte_ActiveShiftRegister()
         }
         else
         {
-            scheduleTask(g_SPI_task_strobe);
-            g_SPI_lastActiveTransmission = g_SPI_activeTransmission;
-            g_SPI_activeTransmission = -1;
+            if (spiOperation_mem[g_SPI_activeTransmission].strobeOperation & STROBE_ON_TRANSFER_END)
+            {
+                scheduleTask(g_SPI_task_strobeSet);
+            }
+            else if (spiOperation_mem[g_SPI_activeTransmission].strobeOperation & STROBE_ON_TRANSFER)
+            {
+                scheduleTask(g_SPI_task_strobeReset);
+            }
+            else
+            {
+                g_SPI_activeTransmission = -1;
+            }
         }
     }
     return retVal;
@@ -173,7 +206,7 @@ static int8_t SPI_nextByte_ActiveShiftRegister()
  * you want to check the return value. if -1 is returned, try again in the next cycle
  */
 static inline int8_t SPI_activateSPIOperation(SPIOperation* sr, uint8_t bytesToProcess);
-static int8_t SPI_activateSPIOperation(SPIOperation* sr, uint8_t bytesToProcess)
+static inline int8_t SPI_activateSPIOperation(SPIOperation* sr, uint8_t bytesToProcess)
 {
     int8_t retVal = -1;
     if (g_SPI_activeTransmission == -1)
@@ -181,7 +214,14 @@ static int8_t SPI_activateSPIOperation(SPIOperation* sr, uint8_t bytesToProcess)
         g_SPI_activeTransmission = sr - spiOperation_mem;
         sr->bytesToProcess = bytesToProcess;
         sr->bytesReceived = 0;
-        scheduleTask(g_SPI_task_activateShiftRegister);
+        if (sr->strobeOperation & STROBE_ON_TRANSFER_START || sr->strobeOperation & STROBE_ON_TRANSFER)
+        {
+            scheduleTask(g_SPI_task_strobeSet);
+        }
+        else
+        {
+            scheduleTask(g_SPI_task_activateShiftRegister);
+        }
         retVal = g_SPI_activeTransmission;
     }
     return retVal;
