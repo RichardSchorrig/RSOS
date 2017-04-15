@@ -12,7 +12,6 @@
 #define MAX_NR_OF_FOLLOWUP_TASKS 7
 
 static int8_t task_schedulerEnabled = 0;
-static int8_t task_savedTaskNumber = -1;
 
 Task* addTask(unsigned char priority, TaskFunction* taskfunction)
 {
@@ -32,10 +31,12 @@ void addFollowUpTask(Task* task, Task* *followUpArray, Task* followUpTask)
 	{
 	    if (numberOfFollowUps == 0)
 	    {
-	        if (followUpArray == 0) {
+	        if (followUpArray == 0)
+	        {
 	            return; //error
 	        }
-	        else {
+	        else
+	        {
 	            task->followUpTask = followUpArray;
 	        }
 	    }
@@ -50,15 +51,13 @@ void addFollowUpTask(Task* task, Task* *followUpArray, Task* followUpTask)
 
 void setTaskCyclic(Task* task, char cycles)
 {
-	task->status |= isCycleTask;
-	task->status |= ((cycles-2) << 8) & cycleNumberMask;
+	task->status |= ((cycles-1) << 8) & cycleNumberMask;
 	task->currentCycle = cycles - 1;
 }
 
 void setTaskDelay(Task* task, char delay)
 {
-	task->status |= hasWaitTime;
-	task->status |= ((delay-1) << 4) & waitTimeMask;
+	task->status |= ((delay) << 4) & waitTimeMask;
 	task->currentDelay = delay;
 }
 
@@ -75,13 +74,13 @@ void disableScheduler()
 static inline void resetDelay(Task* task) __attribute((always_inline));
 static inline void resetDelay(Task* task)
 {
-	task->currentDelay = ((task->status & waitTimeMask) >> 4) + 1;
+	task->currentDelay = ((task->status & waitTimeMask) >> 4);
 }
 
 static inline void resetCycles(Task* task) __attribute__((always_inline));
 static inline void resetCycles(Task* task)
 {
-	task->currentCycle = ((task->status & cycleNumberMask) >> 8) + 1;
+	task->currentCycle = ((task->status & cycleNumberMask) >> 8);
 }
 
 static inline void unscheduleTask(Task* task) __attribute__((always_inline));
@@ -110,19 +109,6 @@ static inline void unscheduleTask(Task* task)
 #endif /* NEWSCHEDULER */
 }
 
-void saveCurrentContext()
-{
-	task_savedTaskNumber = currentRunningTask;
-	unscheduleTask(&task_mem[currentRunningTask]);		//this is bad, schedules all following tasks
-	//todo: another unschedule function
-}
-
-void restoreCurrentContext()
-{
-	currentRunningTask = task_savedTaskNumber;
-	scheduleTask(&task_mem[currentRunningTask]);
-}
-
 /**
  * returns the task that is active and has the highest priority
  * @return a number in the task_mem array or -1 if no task is active
@@ -138,12 +124,19 @@ static inline int8_t getNextTaskNumber()
 		if (task_mem[i-1].status & Task_isActive)
 		{
 		    numberOfRunningTasks += 1;
+
 			int8_t prio = task_mem[i-1].status & priorityMask;
 			if ( (prio) >= currentPriority)
 			{
-				maxPrioTask = i-1;
+#ifdef STRADEGY_NOBREAK_ONDELAY
+				if (! (task_mem[i-1].currentDelay & Task_isDelayed) )
+#endif /* STRADEGY_NOBREAK_ONDELAY */
+				{
+					maxPrioTask = i-1;
+				}
 				currentPriority = prio;
 			}
+
 		}
 	}
 	return maxPrioTask;
@@ -167,9 +160,24 @@ void scheduler()
 			if (currentRunningTask != -1)
 			{
 				Task* task = &task_mem[currentRunningTask];
-				if (task->currentDelay == 0x00)					//if the delay is zero
+
+				if (task->currentDelay != 0x00)
+				{
+					task->currentDelay -= 1;
+#ifdef STRADEGY_NOBREAK_ONDELAY
+					task->currentDelay |= Task_isDelayed;
+#else
+					break;		//exit scheduler, todo: synchronize timer interrupt waking scheduler
+#endif /* STRADEGY_NOBREAK_ONDELAY */
+				}
+				else 					//if the delay is zero
 				{
 					task->task();
+
+					if (task->status & hasWaitTime)
+					{
+						resetDelay(task);
+					}
 
 					if (task->status & isCycleTask)
 					{
@@ -186,18 +194,6 @@ void scheduler()
 					else
 					{
 						unscheduleTask(task);
-					}
-				}
-				if (task->status & hasWaitTime)
-				{
-					if (task->currentDelay != 0x00)
-					{
-						task->currentDelay -= 1;
-						break;		//exit scheduler, todo: synchronize timer interrupt waking scheduler
-					}
-					else
-					{
-						resetDelay(task);
 					}
 				}
 			}

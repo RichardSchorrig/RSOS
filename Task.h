@@ -24,6 +24,7 @@
  */
 #define STRADEGY_NOWAIT
 #define NEWSCHEDULER
+#define STRADEGY_NOBREAK_ONDELAY
 
 #include <RSOSDefines.h>
 
@@ -44,22 +45,28 @@
 /**
  * bit identifier: is cyclic
  */
-#define isCycleTask 0x0800
+#define isCycleTask 0x0F00
 
 /**
  * mask for the number of cycles
  */
-#define cycleNumberMask 0x0700
+#define cycleNumberMask 0x0F00
 
 /**
  * bit identifier: has wait time
  */
-#define hasWaitTime 0x0080
+#define hasWaitTime 0x00F0
+
+/**
+ * bit identifier: delayed state
+ * in the field currentDelay of Task
+ */
+#define Task_isDelayed 0x80
 
 /**
  * mask for the wait time
  */
-#define waitTimeMask 0x0070
+#define waitTimeMask 0x00F0
 
 /**
  * mask for the priority
@@ -103,7 +110,12 @@ struct Task_t;
  * 	  							1111: 15    //todo!
  * 	  PPPP: Priority from 0 to 15
  *
- * 	currentDelay: delay counter when executed
+ * 	currentDelay: delay counter when executed,
+ * 				  also contains bit identifier
+ * 				  to determine the delay state.
+ * 				  The delay state is set when the delay
+ * 				  is decremented and reset on wake scheduler interrupt
+ * 				  (the task can't be executed as long as this bit is set)
  * 	currentCycle: cycle counter when executed
  * 	followUpTask: more task structures
  *
@@ -162,14 +174,14 @@ void addFollowUpTask(Task* task, Task* *followUpArray, Task* followUpTask);
 /**
  * sets a task cyclic, so it is executed more than once if it becomes active
  * @param task: the position of the task in the tasks-array
- * @param cycles: the number of cycles to be executed (2 to 9 cycles)
+ * @param cycles: the number of cycles to be executed (2 to 16 cycles)
  */
 void setTaskCyclic(Task* task, char cycles);
 
 /**
  * sets a delay to a task, after a task becomes active, the scheduler waits the given number of cycles before the task is executed
  * @param task: the position of the task in the tasks-array
- * @param delay: the number of cycles the scheduler waits (1 to 8 delay cycles)
+ * @param delay: the number of cycles the scheduler waits (1 to 15 delay cycles)
  */
 void setTaskDelay(Task* task, char delay);
 
@@ -185,14 +197,18 @@ static inline int8_t getTaskNumber(Task* task) {
 }
 
 /**
- * saves the current running task to make a context change
+ * resets all delay states for all tasks.
+ * This function should only be called in the interrupt that waits the scheduler
  */
-void saveCurrentContext();
-
-/**
- * restores the previous saved context
- */
-void restoreCurrentContext();
+static inline void Task_resetDelayState() __attribute__((always_inline));
+static inline void Task_resetDelayState()
+{
+	int8_t i;
+	for (i=tasks_size; i>0; i-=1)
+	{
+		task_mem[i-1].currentDelay &= ~Task_isDelayed;
+	}
+}
 
 /**
  * sets a task active, it is executed when the scheduler is working
