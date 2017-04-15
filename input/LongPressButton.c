@@ -56,8 +56,8 @@ void setLongPressButton_decrementWaitTime(LongPressButton* lpbutton, uint8_t cyc
     lpbutton->status |= (cycles & LongPressButton_CycleMask);
 }
 
-static inline void longPressButton_setWaitTime(LongPressButton* btn);
-static void longPressButton_setWaitTime(LongPressButton* btn) {
+static inline void longPressButton_setWaitTime(LongPressButton* btn) __attribute__((always_inline));;
+static inline void longPressButton_setWaitTime(LongPressButton* btn) {
     Button_setWaitTime(btn->button);
     if (btn->status & LongPressButton_isDecremental)
     {
@@ -85,8 +85,8 @@ void longPressButton_Enable() {
     }
 }
 
-static inline void longPressButton_Disable(LongPressButton* btn);
-static void longPressButton_Disable(LongPressButton* btn) {
+static inline void longPressButton_Disable(LongPressButton* btn) __attribute__((always_inline));
+static inline void longPressButton_Disable(LongPressButton* btn) {
     btn->button->status |= Button_isActive;
     btn->status &= ~LongPressButton_isActive;
     btn->status |= LongPressButton_isReleased;
