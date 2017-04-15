@@ -21,8 +21,8 @@ void initButtonOperation(uint16_t clockMultiply) {
 //    setTimer(timer_buttonWaitScheduler);
 }
 
-inline uint8_t Button_getExponentAndTime(uint8_t time);
-uint8_t Button_getExponentAndTime(uint8_t time) {
+static inline uint8_t Button_getExponentAndTime(uint8_t time) __attribute__((always_inline));;
+static inline uint8_t Button_getExponentAndTime(uint8_t time) {
     uint8_t timeCpy = time;
     uint8_t exponent = 0;
     while (timeCpy & ~button_waitTimeMask) {
@@ -77,8 +77,8 @@ void addTaskOnReleaseToButton(Button* button, Task* task)
     button->status &= ~Button_taskOnPress;
 }
 
-inline void enableBtnInterrupt(Button* btn);
-void enableBtnInterrupt(Button* btn)
+static inline void enableBtnInterrupt(Button* btn) __attribute__((always_inline));;
+static inline void enableBtnInterrupt(Button* btn)
 {
 	setPortInterrupt(btn->port, btn->bit, 1);
 	/*
@@ -89,8 +89,8 @@ void enableBtnInterrupt(Button* btn)
 	*/
 }
 
-static inline void buttonReleased(Button* button);
-static void buttonReleased(Button* button) {
+static inline void buttonReleased(Button* button) __attribute__((always_inline));;
+static inline void buttonReleased(Button* button) {
     enableBtnInterrupt(button);
     if ((~button->status & Button_taskOnPress) && button->task != -1) {
         scheduleTask(&task_mem[button->task]);
@@ -98,7 +98,6 @@ static void buttonReleased(Button* button) {
     button->status &= ~Button_isActive;
 }
 
-#include <msp430.h>
 void buttonWaitScheduler() {
     buttonSchedulerEntered();
 

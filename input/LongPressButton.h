@@ -9,7 +9,7 @@
 #define INPUT_LONGPRESSBUTTON_H_
 
 #include <RSOSDefines.h>
-
+#define MAXLONGPRESSBUTTONS
 #ifdef MAXLONGPRESSBUTTONS
 
 #include "Buttons.h"
@@ -48,27 +48,29 @@ typedef struct LongPressButton_t {
 /**
  * bit identifier: is Active
  */
-static const uint8_t LongPressButton_isActive = 0x80;
+#define LongPressButton_isActive 0x80
 
-
-static const uint8_t LongPressButton_isReleased = 0x40;
+/**
+ * bit identifier: is released
+ */
+#define LongPressButton_isReleased 0x40
 
 /**
  * bit identifier: is repetitive
  */
-static const uint8_t LongPressButton_isRepetitive = 0x20;
+#define LongPressButton_isRepetitive 0x20
 
 /**
  * bit identifier: is decremental
  * @see setLongPressButton_decrementWaitTime() for explanation
  */
-static const uint8_t LongPressButton_isDecremental = 0x10;
+#define LongPressButton_isDecremental 0x10
 
 /**
  * mask for the decremented wait time cycle
  * @see setLongPressButton_decrementWaitTime() for explanation
  */
-static const uint8_t LongPressButton_CycleMask = 0x0F;
+#define LongPressButton_CycleMask 0x0F
 
 extern LongPressButton longPressButton_mem[MAXLONGPRESSBUTTONS];
 extern int8_t longPressButton_size;

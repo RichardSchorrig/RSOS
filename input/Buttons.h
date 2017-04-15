@@ -29,6 +29,7 @@
 #include <RSOSDefines.h>
 
 #include <stdint.h>
+#define MAXBUTTONS
 
 /* exclude everything if not used */
 #ifdef MAXBUTTONS
@@ -78,18 +79,18 @@ extern Button buttons_mem[MAXBUTTONS];
 /**
  * bit identifier: is active
  */
-static const uint8_t Button_isActive = 0x80;
+#define Button_isActive 0x80
 
 /**
  * bit identifier: task is on press (immediately scheduled when button is pressed)
  * if not set, the task is scheduled when debounce time is counted to zero
  */
-static const uint8_t Button_taskOnPress = 0x40;
+#define Button_taskOnPress 0x40
 
 /**
  * mask for the wait time's exponent
  */
-static const uint8_t Button_exponentMask = 0x30;
+#define Button_exponentMask 0x30
 
 /**
  * exponent 1
@@ -109,7 +110,7 @@ static const uint8_t Button_exponentMask = 0x30;
 /**
  * mask for the actual wait time (debounce time)
  */
-static const uint8_t button_waitTimeMask = 0x0F;
+#define button_waitTimeMask 0x0F
 
 /**
  * enables button operation
@@ -169,8 +170,8 @@ void addTaskOnReleaseToButton(Button* button, Task* task);
  * disables the interrupt for the pin the button is connected to.
  * @param btn the button which interrupt should be disabled.
  */
-static inline void disableBtnInterrupt(Button* btn);
-static void disableBtnInterrupt(Button* btn)
+static inline void disableBtnInterrupt(Button* btn) __attribute__((always_inline));;
+static inline void disableBtnInterrupt(Button* btn)
 {
 	setPortInterrupt(btn->port, btn->bit, 0);
 	/*
@@ -185,8 +186,8 @@ static void disableBtnInterrupt(Button* btn)
  * sets the button's wait time for debouncing
  * @param btn the button which wait time is set
  */
-static inline void Button_setWaitTime(Button* btn);
-static void Button_setWaitTime(Button* btn) {
+static inline void Button_setWaitTime(Button* btn) __attribute__((always_inline));;
+static inline void Button_setWaitTime(Button* btn) {
     uint8_t exponent;
     switch (btn->status & Button_exponentMask) {
     case Button_exponent_0: exponent = 0; break;
@@ -204,8 +205,8 @@ static void Button_setWaitTime(Button* btn) {
  * else if a task is connected to the button release, it will be scheduled on release.
  * @param button the button being pressed
  */
-static inline void buttonPressed(Button* button);
-static void buttonPressed(Button* button) {
+static inline void buttonPressed(Button* button) __attribute__((always_inline));;
+static inline void buttonPressed(Button* button) {
     if (!(button->status & Button_isActive)) {
         disableBtnInterrupt(button);
         Button_setWaitTime(button);

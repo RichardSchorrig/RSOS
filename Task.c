@@ -9,8 +9,6 @@
 
 #include <HardwareAdaptionLayer.h>
 
-//#include <msp430.h>
-
 #define MAX_NR_OF_FOLLOWUP_TASKS 7
 
 static int8_t task_schedulerEnabled = 0;
@@ -74,8 +72,8 @@ void disableScheduler()
 	task_schedulerEnabled = 0;
 }
 
-inline void resetDelay(Task* task);
-void resetDelay(Task* task)
+static inline void resetDelay(Task* task) __attribute((always_inline));
+static inline void resetDelay(Task* task)
 {
 	task->currentDelay = ((task->status & waitTimeMask) >> 4) + 1;
 }

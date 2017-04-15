@@ -34,27 +34,37 @@
 /**
  * bit identifier: active
  */
-static const uint16_t Task_isActive = 0x8000;
+#define Task_isActive 0x8000
 
 /**
  * bit identifier: task has follow up tasks
  */
-static const uint16_t followUpNumberMask = 0x7000;
+#define followUpNumberMask 0x7000
 
 /**
  * bit identifier: is cyclic
  */
-static const uint16_t isCycleTask = 0x0800;
+#define isCycleTask 0x0800
 
 /**
  * mask for the number of cycles
  */
-static const uint16_t cycleNumberMask = 0x0700;
+#define cycleNumberMask 0x0700
 
-static const uint16_t hasWaitTime = 0x0080;
-static const uint16_t waitTimeMask = 0x0070;
+/**
+ * bit identifier: has wait time
+ */
+#define hasWaitTime 0x0080
 
-static const uint16_t priorityMask = 0x000F;
+/**
+ * mask for the wait time
+ */
+#define waitTimeMask 0x0070
+
+/**
+ * mask for the priority
+ */
+#define priorityMask 0x000F
 
 /**
  * type definition of the function executed when task is scheduled

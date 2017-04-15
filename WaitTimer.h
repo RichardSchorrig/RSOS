@@ -31,12 +31,12 @@
 /**
  * mask for the actual wait time
  */
-static const uint16_t timer_waitTimeMask = 0x0FFF;
+#define timer_waitTimeMask 0x0FFF
 
 /**
  * mask for the exponent (0, 2, 4)
  */
-static const uint16_t exponentMask = 0x3000;
+#define exponentMask 0x3000
 
 /**
  * exponent 1
@@ -56,12 +56,12 @@ static const uint16_t exponentMask = 0x3000;
 /**
  * bit identifier: cyclic
  */
-static const unsigned int WaitTimer_isCyclicTimer = 0x4000;
+#define WaitTimer_isCyclicTimer 0x4000
 
 /**
  * bit identifier: active
  */
-static const unsigned int WaitTimer_isActive = 0x8000;
+#define WaitTimer_isActive 0x8000
 
 struct WaitTimer_t;
 
@@ -140,8 +140,8 @@ void setTimerCyclic(WaitTimer* waitTimer);
  * will activate the task on start if the timer is not running
  * @param waitTimer: the timer to set active
  */
-static inline void setTimer(WaitTimer* waitTimer);
-static void setTimer(WaitTimer* waitTimer)
+static inline void setTimer(WaitTimer* waitTimer) __attribute__((always_inline));;
+static inline void setTimer(WaitTimer* waitTimer)
 {
 	if (!(waitTimer->status & WaitTimer_isActive))
 	{
@@ -162,8 +162,8 @@ static void setTimer(WaitTimer* waitTimer)
  * stops the specified timer. the end task is not scheduled.
  * @param waitTimer: the timer to stop
  */
-static inline void haltTimer(WaitTimer* waitTimer);
-static void haltTimer(WaitTimer* waitTimer)
+static inline void haltTimer(WaitTimer* waitTimer) __attribute__((always_inline));;
+static inline void haltTimer(WaitTimer* waitTimer)
 {
     waitTimer->status &= ~WaitTimer_isActive;
 }
@@ -173,8 +173,8 @@ static void haltTimer(WaitTimer* waitTimer)
  * and the timer is not reset. It continues to run where it was halted.
  * @param waitTimer: the timer to continue
  */
-static inline void continueTimer(WaitTimer* waitTimer);
-static void continueTimer(WaitTimer* waitTimer)
+static inline void continueTimer(WaitTimer* waitTimer) __attribute__((always_inline));;
+static inline void continueTimer(WaitTimer* waitTimer)
 {
     waitTimer->status |= WaitTimer_isActive;
 }
