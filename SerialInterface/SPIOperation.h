@@ -51,7 +51,7 @@ typedef struct SPIStrobe_t {
  * Shift Register Operation structure
  *  Fields:
  *      buffer: a pointer to a buffer array
- *      spiOperation: indicates the type of strobe signal:
+ *      strobeOperation: indicates the type of strobe signal:
  *              - short strobe on start
  *              - short strobe on end
  *              - strobe while transmission is active
@@ -153,9 +153,35 @@ void SPI_initOperation(volatile unsigned char * writeAddress, volatile unsigned 
  * of the shift register
  * @param bufferbuffer: the buffer memory pointer to be used
  * @param bufferLength: the maximum length of the buffer
+ * @param strobeOperation: the operation mode for the strobe pin.
+ * The byte contains the mode and polarity of the strobe signal:
+ *  - STROBE_ON_TRANSFER
+ *  - STROBE_ON_TRANSFER_START
+ *  - STROBE_ON_TRANSFER_END
+ *  - STROBE_NO_STROBE
+ *  logically or'd with:
+ *  - STROBE_POLARITY_HIGH
+ *  - STROBE_POLARITY_LOW
  * @return: the initialized structure pointer
  */
 SPIOperation* SPI_initSPIOperation(uint8_t strobePin, volatile uint8_t * strobePort, BufferBuffer_uint8* bufferbuffer, uint8_t strobeOperation);
+
+/**
+ * changes the SPI operation strobe mode
+ * @param spiop: the spi operation structure to change
+ * @param strobeOperation: the operation mode for the strobe pin
+ * @return -1 if the structure is being processed, 0 on success
+ */
+static inline int8_t SPI_changeStrobeOperaton(SPIOperation* spiop, uint8_t strobeOperation) __attribute__((always_inline));
+static inline int8_t SPI_changeStrobeOperaton(SPIOperation* spiop, uint8_t strobeOperation)
+{
+    if (0 == spiop->bytesToProcess)
+    {
+        spiop->strobeOperation = strobeOperation;
+        return 0;
+    }
+    return -1;
+}
 
 /**
  * interrupt service routine call
