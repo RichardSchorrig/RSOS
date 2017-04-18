@@ -9,6 +9,14 @@
  * It is not supported to connect motors both ways at the same time.
  *
  * The shift register is connected via SPI to the controller
+ *
+ * changelog:
+ *  2017 04 17
+ *      rewriting of all functions, splitting up into 3 different files
+ *      (by connection of the stepper to the mcu)
+ *
+ *  2017 04 18
+ *      done rewriting, check if functions step_relative and step_absolute can be defined here
  */
 
 #ifndef STEPPER_H_
@@ -17,7 +25,7 @@
 /**
  * defines that all steppers are connected via a shift register instead of a direct connection
  */
-#define STEPPER_SHIFTREGISTER
+
 
 /**
  * maximum steps of a motor
@@ -28,152 +36,17 @@
 
 /* exclude everything if not used */
 #ifdef MAXSTEPPER
-#include <msp430.h>
 #include <stdint.h>
 
-
-#include <RSOSDefines.h>
 #include "../Task.h"
-#include "../SerialInterface/SPIOperation.h"
 
-typedef struct stepper_pins_t{
-	unsigned char port;
-	unsigned char pin0;
-	unsigned char pin1;
-	unsigned char pin2;
-	unsigned char pin3;
-} stepperPins;
-
-typedef struct stepper_shiftregister_t{
-	unsigned char position;
-} stepperShiftregister;
-
-typedef struct stepper_t{
-#ifdef STEPPER_SHIFTREGISTER
-	stepperShiftregister registerPosition;
-#else
-	stepperPins pins;
-#endif /* STEPPER_SHIFTREGISTER */
-	unsigned char position_motor; /** the position of the motor (down, left, up, right), additionally saves a direction indicator */
-	unsigned char position_needle; /** the position of the needle to be */
-	unsigned char position_needle_current; /** the actual position of the needle */
-} Stepper;
-
-/*
- * position_motor explained:
- * the first four bits indicate the pin voltage (0: 0V, 1:VCC) of the motor,
- * it either turns (voltage over one coil) or does not (both coil potentials are identical)
- *
- * 5th bit indicates the motor state to compute the next value of the pins state
- * 0000 -> 0001 -> 0011 -> 0111 -> 1111 -> 1110 -> 1100 -> 1000 -> 0000
- * (0: 0000-1111: xn = 2*x + 1; 1: 1111-0000: xn = 2*x - 16;)
- * when the value 1111 or 0000 are reached, the bit is toggled, the direction is maintained
- *
- * 6th bit determines the rotation direction: 0: clockwise, 1: counterclockwise. with bit 5 the pin states are calculated
- * 0: rules above apply
- * 1: 0000 <- 0001 <- 0011 <- 0111 <- 1111 <- 1110 <- 1100 <- 1000 <- 0000
- * bit 5 is 0 (0000-1111): xn = x > 1; 1 (1111-0000): 0.5*x + 8, xn =  x>1 + 8;
- * to change the turning direction, simply toggle bit 6
- *
- * 7th bit indicates the state: 0: inactive (no operation to be done), 1: active (look into position_needle and position_needle_current)
- */
-
-#define STEPPER_PIN0 BIT0
-#define STEPPER_PIN1 BIT1
-#define STEPPER_PIN2 BIT2
-#define STEPPER_PIN3 BIT3
-#define STEPPER_PINS_MASK 0x0F
-#define STEPPER_COUNTERCLOCKWISE BIT6
-#define STEPPER_SECTOR_HIGH BIT5
-#define STEPPER_ACTIVE BIT7
-
-extern Stepper stepper_mem[MAXSTEPPER];
-extern int8_t stepper_size;
-
-#ifdef STEPPER_SHIFTREGISTER
-//extern uint8_t stepper_buffer[STEPPER_BUFFERSIZE];
-//extern uint8_t stepper_bufferPosition;
-SPIOperation* stepperShiftRegister;
-#endif /* STEPPER_SHIFTREGISTER */
-
-/**
- * task needed to step the motor(s)
- * set cyclic!
- */
-Task* stepTask;
-
-/**
- * inits the stepper operation.
- * Must be called in order to step anything
- * Ensure to call SR_initOperation() first.
- * also make sure to have one task and one shift register operation structure available
- *
- * @param port: the port the strobe pin is at
- * @param pin: the bit for the strobe pin
- */
-#ifdef STEPPER_SHIFTREGISTER
-void initStepperOperation(volatile uint8_t * port, uint8_t pin);
-#endif /* STEPPER_SHIFTREGISTER */
-
-/**
- * inits a step motor
- *
- * the motor must be connected to 4 pins of the controller
- * the first two control coil 1 of the motor
- * the second two control coil 2 of the motor
- * the pins must belong to one port
- *
- * there are two versions of this function, depending on the definition of STEPPER_SHIFTREGISTER
- *
- * if defined STEPPER_SHIFTREGISTER
- * @param shiftregisterPosition: the position the motor is connected to the shift register.
- * A shift register usually has 8 pins, giving 2 possible positions for one motor. When shift registers are chained,
- * the position can be more than "2".
- *
- * else
- * @param port: the port of the pins the motor is connected to, initializes the given pins as outputs
- * @param pinX: all the pin numbers
- * endif
- *
- * @return: a reference to the new stepper
- */
-#ifdef STEPPER_SHIFTREGISTER
-	Stepper* initStepper(unsigned char shiftregisterPosition);
-#else
-	Stepper* initStepper(unsigned char port, unsigned char pin0, unsigned char pin1, unsigned char pin2, unsigned char pin3);
-#endif /* STEPPER_SHIFTREGISTER */
-
-/**
- * turns the motor's needle some steps in a direction
- * @param stepper: the stepper motor to control
- * @param direction: the direction to turn: -1 to turn counterclockwise, +1 to turn clockwise
- * @param steps: the number of steps to turn
- */
-void step_relative(Stepper* stepper, signed char direction, unsigned char steps);
-
-/**
- * turn the motor's needle to a given position
- * @param stepper: the stepper motor to control
- * @param steps: the absolute position to turn the needle to
- */
-void step_absolute(Stepper* stepper, unsigned char steps);
-
-/**
- * the task to be called when a motor should turn;
- * checks the actual and designated position of each stepper
- * stays active until all stepper match the desired position
- *
- * task is scheduled by function step_relative() or step_absolute()
- */
-void task_stepTask();
-
-#ifdef STEPPER_SHIFTREGISTER
-//inline void toggleShiftRegister(Stepper* stepper);
-#else
-inline void togglePins(Stepper* stepper);
-#endif /* STEPPER_SHIFTREGISTER */
-
-inline void rotate(Stepper* stepper);
+#ifdef STEPPER_DIRECT
+#include "Stepper/Stepper_Direct.h"
+#elif defined STEPPER_SHIFTREGISTER
+#include "Stepper/Stepper_ShiftRegister.h"
+#elif defined STEPPERLV8549
+#include "Stepper/Stepper_LV8549.h"
+#endif /* STEPPER */
 
 #endif /* MAXSTEPPER */
 #endif /* STEPPER_H_ */
