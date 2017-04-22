@@ -95,7 +95,7 @@ Stepper* initStepper(uint8_t shiftregisterPosition);
  * @param stepper: the stepper motor to control
  * @param steps: the absolute position to turn the needle to
  */
-static inline void step_absolute(Stepper* stepper, uint8_t steps) __attribute((always_inline));
+static inline void step_absolute(Stepper* stepper, uint8_t steps) __attribute__((always_inline));
 static inline void step_absolute(Stepper* stepper, uint8_t steps)
 {
     if (steps > STEPPER_MAXSTEPS)
@@ -127,7 +127,7 @@ static inline void step_absolute(Stepper* stepper, uint8_t steps)
         stepper->position_motor |= STEPPER_Counterclockwise;
     }
 
-    stepper->position_motor |= STEPPER_isActive;
+    stepper->position_motor |= STEPPER_isActive | STEPPER_ENA;
     scheduleTask(g_task_stepperScheduler);
 }
 
@@ -137,7 +137,7 @@ static inline void step_absolute(Stepper* stepper, uint8_t steps)
  * @param direction: the direction to turn: -1 to turn counterclockwise, +1 to turn clockwise
  * @param steps: the number of steps to turn
  */
-static inline void step_relative(Stepper* stepper, int8_t direction, uint8_t steps) __attribute((always_inline));
+static inline void step_relative(Stepper* stepper, int8_t direction, uint8_t steps) __attribute__((always_inline));
 static inline void step_relative(Stepper* stepper, int8_t direction, uint8_t steps)
 {
     if (direction == -1)
@@ -153,6 +153,16 @@ static inline void step_relative(Stepper* stepper, int8_t direction, uint8_t ste
             step_absolute(stepper, STEPPER_MAXSTEPS);
         else
             step_absolute(stepper, stepper->position_needle + steps);
+    }
+}
+
+static inline void force_stepperOutput(Stepper* stepper) __attribute__((always_inline));
+static inline void force_stepperOutput(Stepper* stepper)
+{
+    if (!(stepper->position_motor & STEPPER_isActive))
+    {
+        stepper->position_motor |= STEPPER_isActive;
+        scheduleTask(g_task_stepperScheduler);
     }
 }
 
