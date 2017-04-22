@@ -126,7 +126,7 @@ static int8_t I2C_nextByte() {
 
     if (i2c_data_mem[activeI2CTransmission].bytesToWrite > 0)
     {
-        set_getNext_bufferbuffer_uint8(i2c_data_mem[activeI2CTransmission].buffer, 0, i2c_writeAddress);
+        BufferBuffer_uint8_set_getNext(i2c_data_mem[activeI2CTransmission].buffer, 0, i2c_writeAddress);
         i2c_data_mem[activeI2CTransmission].bytesToWrite -= 1;
         return 1;
     }
@@ -143,7 +143,7 @@ static int8_t I2C_nextByte() {
         else
         {
             uint8_t readByte = *i2c_readAddress;
-            set_getNext_bufferbuffer_uint8(i2c_data_mem[activeI2CTransmission].buffer, &readByte, 0);
+            BufferBuffer_uint8_set_getNext(i2c_data_mem[activeI2CTransmission].buffer, &readByte, 0);
 //            set_getNext_bufferbuffer_uint8(i2c_data_mem[activeI2CTransmission].buffer, i2c_readAddress, 0);
 //            UCB1IFG &= ~UCRXIFG;
             i2c_data_mem[activeI2CTransmission].bytesToRead -= 1;

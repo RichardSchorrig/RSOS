@@ -52,6 +52,22 @@ static void set_uint8(Buffer_uint8* buffer, volatile uint8_t* source) {
 }
 
 /**
+ * increments the buffer position without reading or writing
+ * @param buffer the buffer to increment
+ * @return the remaining values after incrementing (0: no values available)
+ */
+static inline void increment_uint8(Buffer_uint8* buffer) __attribute__((always_inline));
+static inline void increment_uint8(Buffer_uint8* buffer)
+{
+    if (buffer->size.readBytes >= buffer->size.size)
+    {
+        return -1;
+    }
+    buffer->size.readBytes += 1;
+    return buffer->size.size - buffer->size.readBytes;
+}
+
+/**
  * read and set a byte to the next buffer position, position is incremented
  * @param buffer the buffer to write to / read from
  * @param source the byte to be written to the buffer, can be 0
