@@ -29,7 +29,6 @@
 #include <RSOSDefines.h>
 
 #include <stdint.h>
-#define MAXBUTTONS
 
 /* exclude everything if not used */
 #ifdef MAXBUTTONS

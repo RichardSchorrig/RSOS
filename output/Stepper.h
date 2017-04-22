@@ -26,12 +26,6 @@
  * defines that all steppers are connected via a shift register instead of a direct connection
  */
 
-
-/**
- * maximum steps of a motor
- */
-#define STEPPER_MAXSTEPS 160
-
 #include <RSOSDefines.h>
 
 /* exclude everything if not used */
@@ -40,11 +34,16 @@
 
 #include "../Task.h"
 
+/**
+ * maximum steps of a motor
+ */
+#define STEPPER_MAXSTEPS 160
+
 #ifdef STEPPER_DIRECT
 #include "Stepper/Stepper_Direct.h"
 #elif defined STEPPER_SHIFTREGISTER
 #include "Stepper/Stepper_ShiftRegister.h"
-#elif defined STEPPERLV8549
+#elif defined STEPPER_LV8549
 #include "Stepper/Stepper_LV8549.h"
 #endif /* STEPPER */
 

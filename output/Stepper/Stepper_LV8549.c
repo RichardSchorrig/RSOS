@@ -37,6 +37,22 @@ Stepper* initStepper(uint8_t shiftregisterPosition)
     return &stepper_mem[stepper_size - 1];
 }
 
+static inline void toggleShiftRegister(Stepper* stepper) __attribute__((always_inline));
+static inline void toggleShiftRegister(Stepper* stepper)
+{
+    unsigned char shiftregNr = (stepper->shiftRegisterPosition) >> 1;
+    if ((stepper->shiftRegisterPosition) & 0x01)
+    {
+        stepperShiftRegister->bufferbuffer->buffer[0]->buffer[shiftregNr] &= ~(STEPPER_SRBit_Mask << 4);
+        stepperShiftRegister->bufferbuffer->buffer[0]->buffer[shiftregNr] |= (stepper->position_motor & STEPPER_SRBit_Mask) << 4;
+    }
+    else
+    {
+        stepperShiftRegister->bufferbuffer->buffer[0]->buffer[shiftregNr] &= ~(STEPPER_SRBit_Mask << 0);
+        stepperShiftRegister->bufferbuffer->buffer[0]->buffer[shiftregNr] |= (stepper->position_motor & STEPPER_SRBit_Mask) << 0;
+    }
+}
+
 static inline void Stepper_rotate(Stepper* stepper) __attribute__((always_inline));
 static inline void Stepper_rotate(Stepper* stepper)
 {
@@ -64,17 +80,6 @@ static inline void Stepper_rotate(Stepper* stepper)
     stepper->position_motor &= ~STEPPER_Bit_Mask;
     stepper->position_motor |= pos & STEPPER_Bit_Mask;
 
-    unsigned char shiftregNr = (stepper->shiftRegisterPosition) >> 1;
-    if ((stepper->shiftRegisterPosition) & 0x01)
-    {
-        stepperShiftRegister->bufferbuffer->buffer[0]->buffer[shiftregNr] &= ~(STEPPER_SRBit_Mask << 4);
-        stepperShiftRegister->bufferbuffer->buffer[0]->buffer[shiftregNr] |= (stepper->position_motor & STEPPER_SRBit_Mask) << 4;
-    }
-    else
-    {
-        stepperShiftRegister->bufferbuffer->buffer[0]->buffer[shiftregNr] &= ~(STEPPER_SRBit_Mask << 0);
-        stepperShiftRegister->bufferbuffer->buffer[0]->buffer[shiftregNr] |= (stepper->position_motor & STEPPER_SRBit_Mask) << 0;
-    }
 }
 
 static void stepTask()
@@ -98,7 +103,7 @@ static void stepTask()
                     stepper_mem[i-1].position_motor &= ~STEPPER_ENA;
                     stepper_mem[i-1].position_motor &= ~STEPPER_isActive;
                 }
-
+                toggleShiftRegister(&stepper_mem[i-1]);
             }
             else
             {

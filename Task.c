@@ -167,7 +167,7 @@ void scheduler()
 #ifdef STRADEGY_NOBREAK_ONDELAY
 					task->currentDelay |= Task_isDelayed;
 #else
-					break;		//exit scheduler, todo: synchronize timer interrupt waking scheduler
+					break;		//exit scheduler
 #endif /* STRADEGY_NOBREAK_ONDELAY */
 				}
 				else 					//if the delay is zero

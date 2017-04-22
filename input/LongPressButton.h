@@ -9,7 +9,6 @@
 #define INPUT_LONGPRESSBUTTON_H_
 
 #include <RSOSDefines.h>
-#define MAXLONGPRESSBUTTONS
 #ifdef MAXLONGPRESSBUTTONS
 
 #include "Buttons.h"
@@ -20,7 +19,7 @@
 /**
  * Long Press Button Structure
  * Fields:
- *  button: a reference to the underlying button
+ *  button: a reference to the underlying button, todo: change to number to save memory
  *  status: bit field containing:
  *      AERF CCCC
  *      A: is active
@@ -125,7 +124,7 @@ void addShortPressTask_toLPButton(LongPressButton* lpbutton, Task* task);
  * or only once (after the long press time, the task is scheduled and the long press button becomes inactive)
  * @param lpbutton the button to add the task to
  * @param task the task to add
- * @param isRepetitive: wether or not the task is repeatedly scheduled (1: repetitive, 0: once)
+ * @param isRepetitive: whether or not the task is repeatedly scheduled (1: repetitive, 0: once)
  */
 void addLongPressTask_toLPButton(LongPressButton* lpbutton, Task* task, int8_t isRepetitive);
 

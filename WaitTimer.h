@@ -140,7 +140,7 @@ void setTimerCyclic(WaitTimer* waitTimer);
  * will activate the task on start if the timer is not running
  * @param waitTimer: the timer to set active
  */
-static inline void setTimer(WaitTimer* waitTimer) __attribute__((always_inline));;
+static inline void setTimer(WaitTimer* waitTimer) __attribute__((always_inline));
 static inline void setTimer(WaitTimer* waitTimer)
 {
 	if (!(waitTimer->status & WaitTimer_isActive))
@@ -162,7 +162,7 @@ static inline void setTimer(WaitTimer* waitTimer)
  * stops the specified timer. the end task is not scheduled.
  * @param waitTimer: the timer to stop
  */
-static inline void haltTimer(WaitTimer* waitTimer) __attribute__((always_inline));;
+static inline void haltTimer(WaitTimer* waitTimer) __attribute__((always_inline));
 static inline void haltTimer(WaitTimer* waitTimer)
 {
     waitTimer->status &= ~WaitTimer_isActive;
@@ -173,7 +173,7 @@ static inline void haltTimer(WaitTimer* waitTimer)
  * and the timer is not reset. It continues to run where it was halted.
  * @param waitTimer: the timer to continue
  */
-static inline void continueTimer(WaitTimer* waitTimer) __attribute__((always_inline));;
+static inline void continueTimer(WaitTimer* waitTimer) __attribute__((always_inline));
 static inline void continueTimer(WaitTimer* waitTimer)
 {
     waitTimer->status |= WaitTimer_isActive;

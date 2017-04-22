@@ -13,8 +13,8 @@
  *  2017 04 04
  *      changed the strobe operation to be dynamic for each SPIOperation, added more strobe types
  *
- *  2017 04 05
- *      todo: add priority to SPIOperations, dynamic spi scheduler that checks for active spiops by itself
+ *  2017 04 18
+ *      add noRead to strobeOperation, bytes in the buffer are not overwritten by received bytes
  */
 
 #ifndef SHIFTREGISTEROPERATION_H_
@@ -50,14 +50,14 @@ typedef struct SPIStrobe_t {
 /**
  * Shift Register Operation structure
  *  Fields:
- *      buffer: a pointer to a buffer array
+ *      bufferbuffer: a pointer to a buffer array
  *      strobeOperation: indicates the type of strobe signal:
  *              - short strobe on start
  *              - short strobe on end
  *              - strobe while transmission is active
  *              - no strobe signal
  *          the strobe polarity can be selected: active high or active low
- *      bytesReceived: the number of bytes received while this SR is active, is reset to 0 when activated
+ *      bytesReceived: the number of bytes received while this SR is active, is reset to 0 when activated todo: not counted up
  *      bytesToProcess: the number of bytes left to be written, is set when activated
  *      strobePin: structure with the pin and port to set
  *
@@ -117,6 +117,12 @@ extern Task* task_strobe;
  * strobe active is logic low, strobe inactive is pulled high
  */
 #define STROBE_POLARITY_LOW 0x00
+
+/**
+ * no Read operation: when being transceived, the bytes read by the
+ * interface do not overwrite the buffer
+ */
+#define SPI_NOREAD 0x02
 
 /**
  * set the address to write to, i.e. the interface transfer buffer register the shift register is connected to.
@@ -184,6 +190,27 @@ static inline int8_t SPI_changeStrobeOperaton(SPIOperation* spiop, uint8_t strob
 }
 
 /**
+ * enables / disables the NORead-Operation
+ * @param spiop the spi operation structure to change
+ * @param enable 1: the received bytes are not written to the buffer
+ *               0: the received bytes are written to the buffer
+ * @return -1 if the structure is being processed, 0 on success
+ */
+static inline int8_t SPI_changeNOReadOperation(SPIOperation* spiop, uint8_t enable) __attribute__((always_inline));
+static inline int8_t SPI_changeNOReadOperation(SPIOperation* spiop, uint8_t enable)
+{
+    if (enable)
+    {
+        return SPI_changeStrobeOperaton(spiop, spiop->strobeOperation | SPI_NOREAD);
+    }
+    else
+    {
+        return SPI_changeStrobeOperaton(spiop, spiop->strobeOperation & ~SPI_NOREAD);
+    }
+
+}
+
+/**
  * interrupt service routine call
  * writes the next byte of the active shift register into the address specified
  * by the init function @see SR_initWriteReadAddress
@@ -199,9 +226,19 @@ static inline int8_t SPI_nextByte_ActiveShiftRegister()
         {
             spiOperation_mem[g_SPI_activeTransmission].bytesToProcess -= 1;
             retVal = 1;
-            set_getNext_bufferbuffer_uint8(spiOperation_mem[g_SPI_activeTransmission].bufferbuffer,
-                                           SR_SPIinterface_readAddress,
-                                           SR_SPIinterface_writeAddress);
+            if (spiOperation_mem[g_SPI_activeTransmission].strobeOperation & SPI_NOREAD)
+            {
+                set_getNext_bufferbuffer_uint8(spiOperation_mem[g_SPI_activeTransmission].bufferbuffer,
+                                                           0,
+                                                           SR_SPIinterface_writeAddress);
+            }
+            else
+            {
+                set_getNext_bufferbuffer_uint8(spiOperation_mem[g_SPI_activeTransmission].bufferbuffer,
+                                                           SR_SPIinterface_readAddress,
+                                                           SR_SPIinterface_writeAddress);
+            }
+
         }
         else
         {
@@ -231,7 +268,7 @@ static inline int8_t SPI_nextByte_ActiveShiftRegister()
  * identifies the activated SR.
  * you want to check the return value. if -1 is returned, try again in the next cycle
  */
-static inline int8_t SPI_activateSPIOperation(SPIOperation* sr, uint8_t bytesToProcess);
+static inline int8_t SPI_activateSPIOperation(SPIOperation* sr, uint8_t bytesToProcess) __attribute__((always_inline));
 static inline int8_t SPI_activateSPIOperation(SPIOperation* sr, uint8_t bytesToProcess)
 {
     int8_t retVal = -1;
