@@ -44,15 +44,15 @@ void task_strobe_set()
 {
     if (g_SPI_activeTransmission != -1)
     {
-        if (spiOperation_mem[g_SPI_activeTransmission].strobeOperation & STROBE_POLARITY_HIGH) {
+        if (spiOperation_mem[g_SPI_activeTransmission].operationMode & STROBE_POLARITY_HIGH) {
             strobePinPullHigh();
         }
         else {
             strobePinPullLow();
         }
 
-        if (spiOperation_mem[g_SPI_activeTransmission].strobeOperation & STROBE_ON_TRANSFER_END
-            || spiOperation_mem[g_SPI_activeTransmission].strobeOperation & STROBE_ON_TRANSFER_START)
+        if (spiOperation_mem[g_SPI_activeTransmission].operationMode & STROBE_ON_TRANSFER_END
+            || spiOperation_mem[g_SPI_activeTransmission].operationMode & STROBE_ON_TRANSFER_START)
         {
             scheduleTask(g_SPI_task_strobeReset);
         }
@@ -67,14 +67,14 @@ void task_strobe_reset()
 {
     if (g_SPI_activeTransmission != -1)
     {
-        if (spiOperation_mem[g_SPI_activeTransmission].strobeOperation & STROBE_POLARITY_HIGH) {
+        if (spiOperation_mem[g_SPI_activeTransmission].operationMode & STROBE_POLARITY_HIGH) {
             strobePinPullLow();
         }
         else {
             strobePinPullHigh();
         }
 
-        if (spiOperation_mem[g_SPI_activeTransmission].strobeOperation & STROBE_ON_TRANSFER_START)
+        if (spiOperation_mem[g_SPI_activeTransmission].operationMode & STROBE_ON_TRANSFER_START)
         {
             scheduleTask(g_SPI_task_activateShiftRegister);
         }
@@ -99,7 +99,7 @@ void SPI_initOperation(volatile unsigned char * writeAddress, volatile unsigned 
 SPIOperation* SPI_initSPIOperation(uint8_t strobePin, volatile uint8_t * strobePort, BufferBuffer_uint8* bufferbuffer, uint8_t strobeOperation)
 {
 	spiOperation_mem[spiOperation_size].bufferbuffer = bufferbuffer;
-	spiOperation_mem[spiOperation_size].strobeOperation = strobeOperation;
+	spiOperation_mem[spiOperation_size].operationMode = strobeOperation;
 	spiOperation_mem[spiOperation_size].bytesReceived = 0;
 	spiOperation_mem[spiOperation_size].bytesToProcess = 0;
 	spiOperation_mem[spiOperation_size].strobePin.pin = strobePin;
