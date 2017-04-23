@@ -36,8 +36,20 @@ typedef struct Buffer_uint8_t {
  * @param buffer the buffer to read from
  * @param destination the destination to write the read byte
  */
-static inline void get_uint8(Buffer_uint8* buffer, volatile uint8_t* destination);
-static void get_uint8(Buffer_uint8* buffer, volatile uint8_t* destination) {
+static inline void Buffer_uint8_get(Buffer_uint8* buffer, volatile uint8_t* destination) __attribute__((always_inline));
+static inline void Buffer_uint8_get(Buffer_uint8* buffer, volatile uint8_t* destination)
+{
+    *destination = buffer->buffer[buffer->size.readBytes];
+}
+
+/**
+ * reads a byte from the buffer from the current position without incrementing to the next position
+ * @param buffer the buffer to read from
+ * @param destination the destination to write the read byte
+ */
+static inline void Buffer_int8_get(Buffer_int8* buffer, volatile int8_t* destination) __attribute__((always_inline));
+static inline void Buffer_int8_get(Buffer_int8* buffer, volatile int8_t* destination)
+{
     *destination = buffer->buffer[buffer->size.readBytes];
 }
 
@@ -46,8 +58,20 @@ static void get_uint8(Buffer_uint8* buffer, volatile uint8_t* destination) {
  * @param buffer the buffer to put the byte to
  * @param source the source of the byte
  */
-static inline void set_uint8(Buffer_uint8* buffer, volatile uint8_t* source);
-static void set_uint8(Buffer_uint8* buffer, volatile uint8_t* source) {
+static inline void Buffer_uint8_set(Buffer_uint8* buffer, volatile uint8_t* source) __attribute__((always_inline));
+static inline void Buffer_uint8_set(Buffer_uint8* buffer, volatile uint8_t* source)
+{
+    buffer->buffer[buffer->size.readBytes] = *source;
+}
+
+/**
+ * put a byte to the buffer at the current position without incrementing to the next position
+ * @param buffer the buffer to put the byte to
+ * @param source the source of the byte
+ */
+static inline void Buffer_int8_set(Buffer_int8* buffer, volatile int8_t* source) __attribute__((always_inline));
+static inline void Buffer_int8_set(Buffer_int8* buffer, volatile int8_t* source)
+{
     buffer->buffer[buffer->size.readBytes] = *source;
 }
 
@@ -56,8 +80,8 @@ static void set_uint8(Buffer_uint8* buffer, volatile uint8_t* source) {
  * @param buffer the buffer to increment
  * @return the remaining values after incrementing (0: no values available)
  */
-static inline void increment_uint8(Buffer_uint8* buffer) __attribute__((always_inline));
-static inline void increment_uint8(Buffer_uint8* buffer)
+static inline int8_t Buffer_uint8_increment(Buffer_uint8* buffer) __attribute__((always_inline));
+static inline int8_t Buffer_uint8_increment(Buffer_uint8* buffer)
 {
     if (buffer->size.readBytes >= buffer->size.size)
     {
@@ -68,24 +92,32 @@ static inline void increment_uint8(Buffer_uint8* buffer)
 }
 
 /**
+ * increments the buffer position without reading or writing
+ * @param buffer the buffer to increment
+ * @return the remaining values after incrementing (0: no values available)
+ */
+static inline int8_t Buffer_int8_increment(Buffer_int8* buffer) __attribute__((always_inline));
+static inline int8_t Buffer_int8_increment(Buffer_int8* buffer)
+{
+    return Buffer_uint8_increment((Buffer_uint8*) buffer);
+}
+
+/**
  * read and set a byte to the next buffer position, position is incremented
  * @param buffer the buffer to write to / read from
  * @param source the byte to be written to the buffer, can be 0
  * @param destination the destination for the byte read from the buffer, can be 0
  * @return the number of bytes available or -1 if the buffer is full (no operation done)
  */
-static inline int8_t set_getNext_uint8(Buffer_uint8* buffer, volatile uint8_t* source, volatile uint8_t* destination);
-static int8_t set_getNext_uint8(Buffer_uint8* buffer, volatile uint8_t* source, volatile uint8_t* destination) {
+static inline int8_t Buffer_uint8_set_getNext(Buffer_uint8* buffer, volatile uint8_t* source, volatile uint8_t* destination) __attribute__((always_inline));
+static inline int8_t Buffer_uint8_set_getNext(Buffer_uint8* buffer, volatile uint8_t* source, volatile uint8_t* destination)
+{
 
     if (buffer->size.readBytes >= buffer->size.size)
     {
         return -1;
     }
-/*
-    if (source != 0 && buffer->size.readBytes > 0) {
-        buffer->buffer[buffer->size.readBytes-1] = *source;
-    }
-*/
+
     if (destination != 0) {
         *destination = buffer->buffer[buffer->size.readBytes];
     }
@@ -95,13 +127,21 @@ static int8_t set_getNext_uint8(Buffer_uint8* buffer, volatile uint8_t* source, 
     }
 
     buffer->size.readBytes++;
-/*
-    if (buffer->size.readBytes >= buffer->size.size) {
-//        buffer->size.readBytes = 0;
-        return -1;
-    }
-*/
+
     return buffer->size.size - buffer->size.readBytes;
+}
+
+/**
+ * read and set a byte to the next buffer position, position is incremented
+ * @param buffer the buffer to write to / read from
+ * @param source the byte to be written to the buffer, can be 0
+ * @param destination the destination for the byte read from the buffer, can be 0
+ * @return the number of bytes available or -1 if the buffer is full (no operation done)
+ */
+static inline int8_t Buffer_int8_set_getNext(Buffer_int8* buffer, volatile int8_t* source, volatile int8_t* destination) __attribute__((always_inline));
+static inline int8_t Buffer_int8_set_getNext(Buffer_int8* buffer, volatile int8_t* source, volatile int8_t* destination)
+{
+    return (Buffer_uint8_set_getNext((Buffer_uint8*) buffer, (volatile uint8_t *) source, (volatile uint8_t *) destination));
 }
 
 /**
@@ -110,9 +150,20 @@ static int8_t set_getNext_uint8(Buffer_uint8* buffer, volatile uint8_t* source, 
  * @param destination the destination for the byte read from the buffer, can be 0
  * @return 1 if read / write is successful, -1 if no read / write operation could be done
  */
-static inline int8_t getNext_uint8(Buffer_uint8* buffer, volatile uint8_t* destination);
-static int8_t getNext_uint8(Buffer_uint8* buffer, volatile uint8_t* destination) {
-    return set_getNext_uint8(buffer, 0, destination);
+static inline int8_t Buffer_uint8_getNext(Buffer_uint8* buffer, volatile uint8_t* destination)  __attribute__((always_inline));
+static inline int8_t Buffer_uint8_getNext(Buffer_uint8* buffer, volatile uint8_t* destination) {
+    return Buffer_uint8_set_getNext(buffer, 0, destination);
+}
+
+/**
+ * reads a byte from the next buffer position, position is incremented
+ * @param buffer the buffer to write to / read from
+ * @param destination the destination for the byte read from the buffer, can be 0
+ * @return 1 if read / write is successful, -1 if no read / write operation could be done
+ */
+static inline int8_t Buffer_int8_getNext(Buffer_int8* buffer, volatile int8_t* destination)  __attribute__((always_inline));
+static inline int8_t Buffer_int8_getNext(Buffer_int8* buffer, volatile int8_t* destination) {
+    return Buffer_int8_set_getNext(buffer, 0, destination);
 }
 
 

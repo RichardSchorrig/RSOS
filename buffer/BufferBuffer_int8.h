@@ -44,7 +44,7 @@ typedef struct BufferBuffer_uint8_t {
 static inline void BufferBuffer_uint8_get(BufferBuffer_uint8* buffer, volatile uint8_t* destination) __attribute__((always_inline));
 static inline void BufferBuffer_uint8_get(BufferBuffer_uint8* buffer, volatile uint8_t* destination)
 {
-    get_uint8(buffer->buffer[buffer->size.readBytes], destination);
+    Buffer_uint8_get(buffer->buffer[buffer->size.readBytes], destination);
 }
 
 /**
@@ -55,7 +55,7 @@ static inline void BufferBuffer_uint8_get(BufferBuffer_uint8* buffer, volatile u
 static inline void BufferBuffer_int8_get(BufferBuffer_int8* buffer, volatile int8_t* destination) __attribute__((always_inline));
 static inline void BufferBuffer_int8_get(BufferBuffer_int8* buffer, volatile int8_t* destination)
 {
-    get_uint8((Buffer_uint8*)buffer->buffer[buffer->size.readBytes], (volatile uint8_t*) destination);
+    Buffer_int8_get(buffer->buffer[buffer->size.readBytes], destination);
 }
 
 /**
@@ -66,7 +66,7 @@ static inline void BufferBuffer_int8_get(BufferBuffer_int8* buffer, volatile int
 static inline void BufferBuffer_uint8_set(BufferBuffer_uint8* buffer, volatile uint8_t* source) __attribute__((always_inline));
 static inline void BufferBuffer_uint8_set(BufferBuffer_uint8* buffer, volatile uint8_t* source)
 {
-    set_uint8(buffer->buffer[buffer->size.readBytes], source);
+    Buffer_uint8_set(buffer->buffer[buffer->size.readBytes], source);
 }
 
 /**
@@ -77,7 +77,7 @@ static inline void BufferBuffer_uint8_set(BufferBuffer_uint8* buffer, volatile u
 static inline void BufferBuffer_int8_set(BufferBuffer_int8* buffer, volatile int8_t* source) __attribute__((always_inline));
 static inline void BufferBuffer_int8_set(BufferBuffer_int8* buffer, volatile int8_t* source)
 {
-    set_uint8((Buffer_uint8*)buffer->buffer[buffer->size.readBytes], (volatile uint8_t*) source);
+    Buffer_int8_set(buffer->buffer[buffer->size.readBytes], source);
 }
 
 /**
@@ -92,7 +92,7 @@ static inline int8_t BufferBuffer_uint8_increment(BufferBuffer_uint8* buffer)
     {
         return -1;
     }
-    if (increment_uint8(buffer->buffer[buffer->size.readBytes]) == 0)
+    if (Buffer_uint8_increment(buffer->buffer[buffer->size.readBytes]) == 0)
     {
         buffer->size.readBytes++;
     }
@@ -125,7 +125,7 @@ static inline int8_t BufferBuffer_uint8_set_getNext(BufferBuffer_uint8* buffer, 
     if (buffer->size.readBytes >= buffer->size.size) {
         return -1;
     }
-    if (set_getNext_uint8(buffer->buffer[buffer->size.readBytes], source, destination) == 0) {
+    if (Buffer_uint8_set_getNext(buffer->buffer[buffer->size.readBytes], source, destination) == 0) {
         buffer->size.readBytes++;
     }
     return buffer->size.size - buffer->size.readBytes;
@@ -156,6 +156,18 @@ static inline int8_t BufferBuffer_uint8_getNext(BufferBuffer_uint8* buffer, vola
 static inline int8_t BufferBuffer_uint8_getNext(BufferBuffer_uint8* buffer, volatile uint8_t* destination)
 {
     return BufferBuffer_uint8_set_getNext(buffer, 0, destination);
+}
+
+/**
+ * reads a byte from the next buffer position, position is incremented
+ * @param buffer the buffer to write to / read from
+ * @param destination the destination for the byte read from the buffer, can be 0
+ * @return 1 if read / write is successful, -1 if no read / write operation could be done
+ */
+static inline int8_t BufferBuffer_int8_getNext(BufferBuffer_int8* buffer, volatile int8_t* destination) __attribute__((always_inline));
+static inline int8_t BufferBuffer_int8_getNext(BufferBuffer_int8* buffer, volatile int8_t* destination)
+{
+    return BufferBuffer_int8_set_getNext(buffer, 0, destination);
 }
 
 
