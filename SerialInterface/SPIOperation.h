@@ -200,24 +200,67 @@ static inline int8_t SPI_changeStrobeOperaton(SPIOperation* spiop, uint8_t strob
 }
 
 /**
- * enables / disables the NORead-Operation
+ * enables / disables the Read-Operation
  * @param spiop the spi operation structure to change
- * @param enable 1: the received bytes are not written to the buffer
- *               0: the received bytes are written to the buffer
+ * @param enable 0: the received bytes are not written to the buffer
+ *               1: the received bytes are written to the buffer
  * @return -1 if the structure is being processed, 0 on success
  */
-static inline int8_t SPI_changeNOReadOperation(SPIOperation* spiop, uint8_t enable) __attribute__((always_inline));
-static inline int8_t SPI_changeNOReadOperation(SPIOperation* spiop, uint8_t enable)
+static inline int8_t SPI_changeReadOperation(SPIOperation* spiop, uint8_t enable) __attribute__((always_inline));
+static inline int8_t SPI_changeReadOperation(SPIOperation* spiop, uint8_t enable)
 {
     if (enable)
     {
-        return SPI_changeStrobeOperaton(spiop, spiop->operationMode | SPI_NOREAD);
+        return SPI_changeStrobeOperaton(spiop, spiop->operationMode | SPI_DOREAD);
     }
     else
     {
-        return SPI_changeStrobeOperaton(spiop, spiop->operationMode & ~SPI_NOREAD);
+        return SPI_changeStrobeOperaton(spiop, spiop->operationMode & ~SPI_DOREAD);
     }
+}
 
+/**
+ * enables / disables the Write-Operation
+ * @param spiop the spi operation structure to change
+ * @param enable 0: for each byte 0x00 is transferred
+ *               1: the content of the buffer is transferred
+ * @return -1 if the structure is being processed, 0 on success
+ */
+static inline int8_t SPI_changeWriteOperation(SPIOperation* spiop, uint8_t enable) __attribute__((always_inline));
+static inline int8_t SPI_changeWriteOperation(SPIOperation* spiop, uint8_t enable)
+{
+    if (enable)
+    {
+        return SPI_changeStrobeOperaton(spiop, spiop->operationMode | SPI_DOWRITE);
+    }
+    else
+    {
+        return SPI_changeStrobeOperaton(spiop, spiop->operationMode & ~SPI_DOWRITE);
+    }
+}
+
+static inline void SPI_nextByte_Write() __attribute__((always_inline));
+static inline void SPI_nextByte_Write()
+{
+    if (spiOperation_mem[g_SPI_activeTransmission].operationMode & SPI_DOWRITE)
+    {
+        BufferBuffer_uint8_get(spiOperation_mem[g_SPI_activeTransmission].bufferbuffer,
+                               SR_SPIinterface_writeAddress);
+    }
+    else
+    {
+        *SR_SPIinterface_writeAddress = 0x00;
+    }
+}
+
+static inline void SPI_nextByte_Read() __attribute__((always_inline));
+static inline void SPI_nextByte_Read()
+{
+    if (spiOperation_mem[g_SPI_activeTransmission].operationMode & SPI_DOREAD)
+    {
+        BufferBuffer_uint8_set(spiOperation_mem[g_SPI_activeTransmission].bufferbuffer,
+                               SR_SPIinterface_readAddress);
+    }
 }
 
 /**
@@ -236,28 +279,19 @@ static inline int8_t SPI_nextByte_ActiveShiftRegister()
         {
             if (spiOperation_mem[g_SPI_activeTransmission].bytesReceived == 0)
             {
-
+                SPI_nextByte_Write();
             }
             else
             {
+                SPI_nextByte_Read();
 
+                BufferBuffer_uint8_increment(spiOperation_mem[g_SPI_activeTransmission].bufferbuffer);
+
+                SPI_nextByte_Write();
             }
             spiOperation_mem[g_SPI_activeTransmission].bytesToProcess -= 1;
             spiOperation_mem[g_SPI_activeTransmission].bytesReceived += 1;
             retVal = 1;
-            if (spiOperation_mem[g_SPI_activeTransmission].operationMode & SPI_NOREAD)
-            {
-                set_getNext_bufferbuffer_uint8(spiOperation_mem[g_SPI_activeTransmission].bufferbuffer,
-                                                           0,
-                                                           SR_SPIinterface_writeAddress);
-            }
-            else
-            {
-                set_getNext_bufferbuffer_uint8(spiOperation_mem[g_SPI_activeTransmission].bufferbuffer,
-                                                           SR_SPIinterface_readAddress,
-                                                           SR_SPIinterface_writeAddress);
-            }
-
         }
         else
         {
@@ -265,7 +299,7 @@ static inline int8_t SPI_nextByte_ActiveShiftRegister()
             {
                 scheduleTask(g_SPI_task_strobeSet);
             }
-            else if (spiOperation_mem[g_SPI_activeTransmission].strobeOperation & STROBE_ON_TRANSFER)
+            else if (spiOperation_mem[g_SPI_activeTransmission].operationMode & STROBE_ON_TRANSFER)
             {
                 scheduleTask(g_SPI_task_strobeReset);
             }
