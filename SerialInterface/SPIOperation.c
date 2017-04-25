@@ -8,7 +8,6 @@
  *  2017.02.03: in function SR_initOperation: added value to match function addFollowUpTask
  */
 
-#include <HardwareAdaptionLayer.h>
 #include "SPIOperation.h"
 
 /* exclude everything if not used */
@@ -18,7 +17,8 @@ volatile unsigned char * SR_SPIinterface_readAddress = 0;
 volatile unsigned char * SR_SPIinterface_writeAddress = 0;
 
 int8_t g_SPI_activeTransmission = -1;
-//int8_t g_SPI_lastActiveTransmission = -1;
+
+volatile uint8_t dummyReadByte = 0;
 
 Task* g_SPI_task_strobeSet = 0;
 Task* g_SPI_task_strobeReset = 0;
@@ -27,6 +27,8 @@ Task* g_SPI_task_activateShiftRegister = 0;
 /** task functions! */
 void SR_enableTransmission()
 {
+    USCI_enable_TXIFG(1);
+    USCI_enable_RXIFG(0);
     enableUSCI_Interrupt();
 }
 

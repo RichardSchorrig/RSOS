@@ -21,6 +21,7 @@
 #define SHIFTREGISTEROPERATION_H_
 
 #include <RSOSDefines.h>
+#include <HardwareAdaptionLayer.h>
 
 /* exclude everything if not used */
 #ifdef MAXSHIFTREGISTER
@@ -36,7 +37,8 @@ extern volatile unsigned char * SR_SPIinterface_readAddress;
 extern volatile unsigned char * SR_SPIinterface_writeAddress;
 
 extern int8_t g_SPI_activeTransmission;
-extern int8_t g_SPI_lastActiveTransmission;
+
+extern volatile uint8_t dummyReadByte;
 
 extern Task* g_SPI_task_activateShiftRegister;
 extern Task* g_SPI_task_strobeSet;
@@ -79,13 +81,6 @@ typedef struct SPIOperation_t {
 
 extern SPIOperation spiOperation_mem[MAXSHIFTREGISTER];
 extern int8_t spiOperation_size;
-/*
-extern int8_t activeShiftRegister;
-extern int8_t lastActiveShiftRegister;
-extern volatile unsigned char * SR_SPIinterface_readAddress;
-extern volatile unsigned char * SR_SPIinterface_writeAddress;
-extern Task* task_strobe;
-*/
 
 /**
  * strobe is activated on end of transfer
@@ -249,17 +244,18 @@ static inline int8_t SPI_changeWriteOperation(SPIOperation* spiop, uint8_t enabl
     }
 }
 
-static inline void SPI_nextByte_Write() __attribute__((always_inline));
-static inline void SPI_nextByte_Write()
+static inline int8_t SPI_nextByte_Write() __attribute__((always_inline));
+static inline int8_t SPI_nextByte_Write()
 {
     if (spiOperation_mem[g_SPI_activeTransmission].operationMode & SPI_DOWRITE)
     {
-        BufferBuffer_uint8_get(spiOperation_mem[g_SPI_activeTransmission].bufferbuffer,
+        return BufferBuffer_uint8_get(spiOperation_mem[g_SPI_activeTransmission].bufferbuffer,
                                SR_SPIinterface_writeAddress);
     }
     else
     {
         *SR_SPIinterface_writeAddress = 0x00;
+        return 0;
     }
 }
 
@@ -268,10 +264,63 @@ static inline void SPI_nextByte_Read()
 {
     if (spiOperation_mem[g_SPI_activeTransmission].operationMode & SPI_DOREAD)
     {
-        BufferBuffer_uint8_set(spiOperation_mem[g_SPI_activeTransmission].bufferbuffer,
-                               SR_SPIinterface_readAddress);
+        if (BufferBuffer_uint8_set(spiOperation_mem[g_SPI_activeTransmission].bufferbuffer,
+                               SR_SPIinterface_readAddress) != -1)
+        {
+            spiOperation_mem[g_SPI_activeTransmission].bytesReceived += 1;
+            return;
+        }
+    }
+    dummyReadByte = *SR_SPIinterface_readAddress;
+}
 
-        spiOperation_mem[g_SPI_activeTransmission].bytesReceived += 1;
+/**
+ * interrupt service routine call
+ * reads the next byte and puts it into the active SPIOperation's buffer
+ * if the buffer is full, a dummy read is initiated
+ */
+static inline int8_t SPI_nextByte_ISR_read() __attribute__((always_inline));
+static inline int8_t SPI_nextByte_ISR_read()
+{
+    if (g_SPI_activeTransmission != -1)
+    {
+        SPI_nextByte_Read();
+
+        BufferBuffer_uint8_increment(spiOperation_mem[g_SPI_activeTransmission].bufferbuffer);
+
+        if (spiOperation_mem[g_SPI_activeTransmission].bytesToProcess > 0)
+        {
+            spiOperation_mem[g_SPI_activeTransmission].bytesToProcess -= 1;
+
+            if (SPI_nextByte_Write() == -1)
+            {
+                g_SPI_activeTransmission = -1;
+                return -1;
+            }
+
+            return 1;
+        }
+        else
+        {
+            if (spiOperation_mem[g_SPI_activeTransmission].operationMode & STROBE_ON_TRANSFER_END)
+            {
+                scheduleTask(g_SPI_task_strobeSet);
+            }
+            else if (spiOperation_mem[g_SPI_activeTransmission].operationMode & STROBE_ON_TRANSFER)
+            {
+                scheduleTask(g_SPI_task_strobeReset);
+            }
+            else
+            {
+                g_SPI_activeTransmission = -1;
+            }
+            return -1;
+        }
+    }
+    else
+    {
+        dummyReadByte = *SR_SPIinterface_readAddress;
+        return -1;
     }
 }
 
@@ -281,8 +330,8 @@ static inline void SPI_nextByte_Read()
  * by the init function @see SR_initWriteReadAddress
  * @return -1 in case no byte is written, 1 in case byte was available
  */
-static inline int8_t SPI_nextByte_ActiveShiftRegister() __attribute__((always_inline));
-static inline int8_t SPI_nextByte_ActiveShiftRegister()
+static inline int8_t SPI_nextByte_ISR_write() __attribute__((always_inline));
+static inline int8_t SPI_nextByte_ISR_write()
 {
     int8_t retVal = -1;
     if (g_SPI_activeTransmission != -1)
@@ -291,24 +340,22 @@ static inline int8_t SPI_nextByte_ActiveShiftRegister()
         {
             if (!(spiOperation_mem[g_SPI_activeTransmission].operationMode & SPI_ACTIVATEREAD))
             {
-                SPI_nextByte_Write();
+                if (SPI_nextByte_Write() == -1)
+                {
+                    g_SPI_activeTransmission = -1;
+                    return -1;
+                }
                 spiOperation_mem[g_SPI_activeTransmission].operationMode |= SPI_ACTIVATEREAD;
+                USCI_enable_TXIFG(0);
+                USCI_enable_RXIFG(1);
             }
             else
             {
-                SPI_nextByte_Read();
-
-                BufferBuffer_uint8_increment(spiOperation_mem[g_SPI_activeTransmission].bufferbuffer);
-
-                SPI_nextByte_Write();
+                return -1;
             }
-            spiOperation_mem[g_SPI_activeTransmission].bytesToProcess -= 1;
-            retVal = 1;
         }
         else
         {
-            SPI_nextByte_Read();
-
             if (spiOperation_mem[g_SPI_activeTransmission].operationMode & STROBE_ON_TRANSFER_END)
             {
                 scheduleTask(g_SPI_task_strobeSet);
