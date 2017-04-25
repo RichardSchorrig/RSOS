@@ -68,7 +68,7 @@ static inline int8_t BufferBuffer_int8_get(BufferBuffer_int8* buffer, volatile i
     }
     else
     {
-        Buffer_int8_get(buffer->buffer[buffer->size.readBytes], destination);
+        return Buffer_int8_get(buffer->buffer[buffer->size.readBytes], destination);
     }
 }
 
@@ -86,7 +86,7 @@ static inline int8_t BufferBuffer_uint8_set(BufferBuffer_uint8* buffer, volatile
     }
     else
     {
-        Buffer_uint8_set(buffer->buffer[buffer->size.readBytes], source);
+        return Buffer_uint8_set(buffer->buffer[buffer->size.readBytes], source);
     }
 }
 
@@ -104,7 +104,7 @@ static inline int8_t BufferBuffer_int8_set(BufferBuffer_int8* buffer, volatile i
     }
     else
     {
-        Buffer_int8_set(buffer->buffer[buffer->size.readBytes], source);
+        return Buffer_int8_set(buffer->buffer[buffer->size.readBytes], source);
     }
 }
 
