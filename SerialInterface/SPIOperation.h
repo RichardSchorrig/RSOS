@@ -52,7 +52,7 @@ typedef struct SPIStrobe_t {
  *  Fields:
  *      bufferbuffer: a pointer to a buffer array
  *      operationMode: indicates the type of strobe signal and read/write operation:
- *          xTSE PRWx
+ *          xTSE PRWa
  *              T: strobe while transmission is active (Chip Enable)
  *              S: short strobe on start
  *              E: short strobe on end
@@ -60,6 +60,7 @@ typedef struct SPIStrobe_t {
  *              - no strobe signal when TSE are low
  *              R: read from interface (1: read and write to buffer, 0: no read)
  *              W: write to interface (1: read from buffer and write to interface, 0: 0x00 is transferred for each byte to process)
+ *              a: activate Read: must not be modified from outside, Identifier that first write cycle complete, read byte ready in interface
  *
  *      bytesReceived: the number of bytes received while this SR is active, is reset to 0 when activated todo: not counted up
  *      bytesToProcess: the number of bytes left to be written, is set when activated
@@ -135,6 +136,12 @@ extern Task* task_strobe;
 #define SPI_DOWRITE 0x02
 
 /**
+ * activate read: set in SPI_nextByte_ActiveShiftRegister() and reset in SPI_activateSPIOperation()
+ * do not modify the field operationMode with this bit
+ */
+#define SPI_ACTIVATEREAD 0x01
+
+/**
  * set the address to write to, i.e. the interface transfer buffer register the shift register is connected to.
  * MSP Devices: something like UCA0TXBUF
  */
@@ -169,18 +176,21 @@ void SPI_initOperation(volatile unsigned char * writeAddress, volatile unsigned 
  * of the shift register
  * @param bufferbuffer: the buffer memory pointer to be used
  * @param bufferLength: the maximum length of the buffer
- * @param strobeOperation: the operation mode for the strobe pin.
- * The byte contains the mode and polarity of the strobe signal:
- *  - STROBE_ON_TRANSFER
- *  - STROBE_ON_TRANSFER_START
- *  - STROBE_ON_TRANSFER_END
- *  - STROBE_NO_STROBE
+ * @param operationMode: the operation mode for the strobe pin and read /write handling.
+ *  The byte contains the mode and polarity of the strobe signal:
+ *      - STROBE_ON_TRANSFER
+ *      - STROBE_ON_TRANSFER_START
+ *      - STROBE_ON_TRANSFER_END
+ *      - STROBE_NO_STROBE
  *  logically or'd with:
- *  - STROBE_POLARITY_HIGH
- *  - STROBE_POLARITY_LOW
+ *      - STROBE_POLARITY_HIGH
+ *      - STROBE_POLARITY_LOW
+ *  also contais read / write mode:
+ *      - Read enable
+ *      - Write enable
  * @return: the initialized structure pointer
  */
-SPIOperation* SPI_initSPIOperation(uint8_t strobePin, volatile uint8_t * strobePort, BufferBuffer_uint8* bufferbuffer, uint8_t strobeOperation);
+SPIOperation* SPI_initSPIOperation(uint8_t strobePin, volatile uint8_t * strobePort, BufferBuffer_uint8* bufferbuffer, uint8_t operationMode);
 
 /**
  * changes the SPI operation strobe mode
@@ -260,6 +270,8 @@ static inline void SPI_nextByte_Read()
     {
         BufferBuffer_uint8_set(spiOperation_mem[g_SPI_activeTransmission].bufferbuffer,
                                SR_SPIinterface_readAddress);
+
+        spiOperation_mem[g_SPI_activeTransmission].bytesReceived += 1;
     }
 }
 
@@ -277,9 +289,10 @@ static inline int8_t SPI_nextByte_ActiveShiftRegister()
     {
         if (spiOperation_mem[g_SPI_activeTransmission].bytesToProcess > 0)
         {
-            if (spiOperation_mem[g_SPI_activeTransmission].bytesReceived == 0)
+            if (!(spiOperation_mem[g_SPI_activeTransmission].operationMode & SPI_ACTIVATEREAD))
             {
                 SPI_nextByte_Write();
+                spiOperation_mem[g_SPI_activeTransmission].operationMode |= SPI_ACTIVATEREAD;
             }
             else
             {
@@ -290,11 +303,12 @@ static inline int8_t SPI_nextByte_ActiveShiftRegister()
                 SPI_nextByte_Write();
             }
             spiOperation_mem[g_SPI_activeTransmission].bytesToProcess -= 1;
-            spiOperation_mem[g_SPI_activeTransmission].bytesReceived += 1;
             retVal = 1;
         }
         else
         {
+            SPI_nextByte_Read();
+
             if (spiOperation_mem[g_SPI_activeTransmission].operationMode & STROBE_ON_TRANSFER_END)
             {
                 scheduleTask(g_SPI_task_strobeSet);
@@ -330,6 +344,7 @@ static inline int8_t SPI_activateSPIOperation(SPIOperation* sr, uint8_t bytesToP
         g_SPI_activeTransmission = sr - spiOperation_mem;
         sr->bytesToProcess = bytesToProcess;
         sr->bytesReceived = 0;
+        sr->operationMode &= ~SPI_ACTIVATEREAD;
         if (sr->operationMode & STROBE_ON_TRANSFER_START || sr->operationMode & STROBE_ON_TRANSFER)
         {
             scheduleTask(g_SPI_task_strobeSet);
