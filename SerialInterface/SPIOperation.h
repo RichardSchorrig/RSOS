@@ -244,6 +244,33 @@ static inline int8_t SPI_changeWriteOperation(SPIOperation* spiop, uint8_t enabl
     }
 }
 
+/**
+ * !only to be called internally!
+ * schedules the strobe operation, depending on the operation mode of the active SPI operation
+ */
+static inline void SPI_scheduleStrobe() __attribute__((always_inline));
+static inline void SPI_scheduleStrobe()
+{
+    if (spiOperation_mem[g_SPI_activeTransmission].operationMode & STROBE_ON_TRANSFER_END)
+    {
+        scheduleTask(g_SPI_task_strobeSet);
+    }
+    else if (spiOperation_mem[g_SPI_activeTransmission].operationMode & STROBE_ON_TRANSFER)
+    {
+        scheduleTask(g_SPI_task_strobeReset);
+    }
+    else
+    {
+        g_SPI_activeTransmission = -1;
+    }
+}
+
+/**
+ * reads from the buffer of the active operation or writes 0x00 to the interface,
+ * depending on the Write-Status of the active operation.
+ * Does not write to the interface if buffer is empty. in this case, -1 is returned.
+ * any positive integer including 0 identify a successful write
+ */
 static inline int8_t SPI_nextByte_Write() __attribute__((always_inline));
 static inline int8_t SPI_nextByte_Write()
 {
@@ -259,6 +286,9 @@ static inline int8_t SPI_nextByte_Write()
     }
 }
 
+#include <msp430.h>
+#define DEBUGPIN1 BIT6
+#define DEBUGPIN1_PORT P3OUT
 static inline void SPI_nextByte_Read() __attribute__((always_inline));
 static inline void SPI_nextByte_Read()
 {
@@ -268,10 +298,69 @@ static inline void SPI_nextByte_Read()
                                SR_SPIinterface_readAddress) != -1)
         {
             spiOperation_mem[g_SPI_activeTransmission].bytesReceived += 1;
+            DEBUGPIN1_PORT ^= DEBUGPIN1;
             return;
         }
     }
     dummyReadByte = *SR_SPIinterface_readAddress;
+}
+
+/**
+ * interrupt service routine call
+ * does a read / write operation depending on the mode of the active SPI Operation.
+ * also changes the interrupt enable bits of the interface:
+ *  - only write:
+ *      the interrupt enable flags remain on for transfer interrupt,
+ *      off for receive interrupt
+ *  - only read and read + write:
+ *      interrupt enable flags is set off for transfer interrupt,
+ *      on for receive interrupt
+ */
+static inline int8_t SPI_nextByte_ISR() __attribute__((always_inline));
+static inline int8_t SPI_nextByte_ISR()
+{
+    if (g_SPI_activeTransmission != -1)
+    {
+        if (spiOperation_mem[g_SPI_activeTransmission].bytesToProcess > 0)
+        {
+            spiOperation_mem[g_SPI_activeTransmission].bytesToProcess -= 1;
+            if (!(spiOperation_mem[g_SPI_activeTransmission].operationMode & SPI_ACTIVATEREAD))
+            {
+                spiOperation_mem[g_SPI_activeTransmission].operationMode |= SPI_ACTIVATEREAD;
+                if (spiOperation_mem[g_SPI_activeTransmission].operationMode & SPI_DOREAD)
+                {
+                    USCI_enable_TXIFG(0);
+                    USCI_enable_RXIFG(1);
+                }
+                if (SPI_nextByte_Write() == -1)
+                {
+                    g_SPI_activeTransmission = -1;
+                    return -1;
+                }
+
+                return 1;
+            }
+            else
+            {
+                SPI_nextByte_Read();
+                BufferBuffer_uint8_increment(spiOperation_mem[g_SPI_activeTransmission].bufferbuffer);
+
+                if (SPI_nextByte_Write() == -1)
+                {
+                    g_SPI_activeTransmission = -1;
+                    return -1;
+                }
+                return 1;
+            }
+        }
+        else
+        {
+            SPI_nextByte_Read();
+            SPI_scheduleStrobe();
+            return -1;
+        }
+    }
+    return -1;
 }
 
 /**
@@ -302,18 +391,7 @@ static inline int8_t SPI_nextByte_ISR_read()
         }
         else
         {
-            if (spiOperation_mem[g_SPI_activeTransmission].operationMode & STROBE_ON_TRANSFER_END)
-            {
-                scheduleTask(g_SPI_task_strobeSet);
-            }
-            else if (spiOperation_mem[g_SPI_activeTransmission].operationMode & STROBE_ON_TRANSFER)
-            {
-                scheduleTask(g_SPI_task_strobeReset);
-            }
-            else
-            {
-                g_SPI_activeTransmission = -1;
-            }
+            SPI_scheduleStrobe();
             return -1;
         }
     }

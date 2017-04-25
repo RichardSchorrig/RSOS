@@ -121,6 +121,8 @@ static void stepTask()
     {
         // add some cycle (it doesn't matter how many cycles since it is repeated and checked each time
         task_mem[currentRunningTask].currentCycle = 2;
+        resetBuffer((Buffer_void*) stepperShiftRegister->bufferbuffer);
+        resetBuffer((Buffer_void*) stepperShiftRegister->bufferbuffer->buffer[0]);
         noSROperation = SPI_activateSPIOperation(stepperShiftRegister, totalNumberOfBytes);
     }
 }
