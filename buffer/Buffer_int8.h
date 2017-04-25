@@ -36,10 +36,18 @@ typedef struct Buffer_uint8_t {
  * @param buffer the buffer to read from
  * @param destination the destination to write the read byte
  */
-static inline void Buffer_uint8_get(Buffer_uint8* buffer, volatile uint8_t* destination) __attribute__((always_inline));
-static inline void Buffer_uint8_get(Buffer_uint8* buffer, volatile uint8_t* destination)
+static inline int8_t Buffer_uint8_get(Buffer_uint8* buffer, volatile uint8_t* destination) __attribute__((always_inline));
+static inline int8_t Buffer_uint8_get(Buffer_uint8* buffer, volatile uint8_t* destination)
 {
-    *destination = buffer->buffer[buffer->size.readBytes];
+    if (buffer->size.readBytes >= buffer->size.size)
+    {
+        return -1;
+    }
+    else
+    {
+        *destination = buffer->buffer[buffer->size.readBytes];
+        return buffer->size.size - buffer->size.readBytes;
+    }
 }
 
 /**
@@ -47,10 +55,18 @@ static inline void Buffer_uint8_get(Buffer_uint8* buffer, volatile uint8_t* dest
  * @param buffer the buffer to read from
  * @param destination the destination to write the read byte
  */
-static inline void Buffer_int8_get(Buffer_int8* buffer, volatile int8_t* destination) __attribute__((always_inline));
-static inline void Buffer_int8_get(Buffer_int8* buffer, volatile int8_t* destination)
+static inline int8_t Buffer_int8_get(Buffer_int8* buffer, volatile int8_t* destination) __attribute__((always_inline));
+static inline int8_t Buffer_int8_get(Buffer_int8* buffer, volatile int8_t* destination)
 {
-    *destination = buffer->buffer[buffer->size.readBytes];
+    if (buffer->size.readBytes >= buffer->size.size)
+    {
+        return -1;
+    }
+    else
+    {
+        *destination = buffer->buffer[buffer->size.readBytes];
+        return buffer->size.size - buffer->size.readBytes;
+    }
 }
 
 /**
@@ -58,10 +74,18 @@ static inline void Buffer_int8_get(Buffer_int8* buffer, volatile int8_t* destina
  * @param buffer the buffer to put the byte to
  * @param source the source of the byte
  */
-static inline void Buffer_uint8_set(Buffer_uint8* buffer, volatile uint8_t* source) __attribute__((always_inline));
-static inline void Buffer_uint8_set(Buffer_uint8* buffer, volatile uint8_t* source)
+static inline int8_t Buffer_uint8_set(Buffer_uint8* buffer, volatile uint8_t* source) __attribute__((always_inline));
+static inline int8_t Buffer_uint8_set(Buffer_uint8* buffer, volatile uint8_t* source)
 {
-    buffer->buffer[buffer->size.readBytes] = *source;
+    if (buffer->size.readBytes >= buffer->size.size)
+    {
+        return -1;
+    }
+    else
+    {
+        buffer->buffer[buffer->size.readBytes] = *source;
+        return buffer->size.size - buffer->size.readBytes;
+    }
 }
 
 /**
@@ -69,10 +93,18 @@ static inline void Buffer_uint8_set(Buffer_uint8* buffer, volatile uint8_t* sour
  * @param buffer the buffer to put the byte to
  * @param source the source of the byte
  */
-static inline void Buffer_int8_set(Buffer_int8* buffer, volatile int8_t* source) __attribute__((always_inline));
-static inline void Buffer_int8_set(Buffer_int8* buffer, volatile int8_t* source)
+static inline int8_t Buffer_int8_set(Buffer_int8* buffer, volatile int8_t* source) __attribute__((always_inline));
+static inline int8_t Buffer_int8_set(Buffer_int8* buffer, volatile int8_t* source)
 {
-    buffer->buffer[buffer->size.readBytes] = *source;
+    if (buffer->size.readBytes >= buffer->size.size)
+    {
+        return -1;
+    }
+    else
+    {
+        buffer->buffer[buffer->size.readBytes] = *source;
+        return buffer->size.size - buffer->size.readBytes;
+    }
 }
 
 /**
