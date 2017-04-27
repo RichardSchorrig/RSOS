@@ -18,7 +18,7 @@ static void stepTask();
 void initStepperOperation(SPIOperation* operation)
 {
     stepperShiftRegister = operation;
-    totalNumberOfBytes = operation->bufferbuffer->buffer[0]->size.size;
+    totalNumberOfBytes = getBufferBuffer_uint8(operation->bufferbuffer)->buffer[0]->size.size;
     g_task_stepperScheduler = addTask(STEPPER_SCHEDULERPRIORITY, stepTask);
     setTaskCyclic(g_task_stepperScheduler, 2);
 }
@@ -43,13 +43,13 @@ static inline void toggleShiftRegister(Stepper* stepper)
     unsigned char shiftregNr = (stepper->shiftRegisterPosition) >> 1;
     if ((stepper->shiftRegisterPosition) & 0x01)
     {
-        stepperShiftRegister->bufferbuffer->buffer[0]->buffer[shiftregNr] &= ~(STEPPER_SRBit_Mask << 4);
-        stepperShiftRegister->bufferbuffer->buffer[0]->buffer[shiftregNr] |= (stepper->position_motor & STEPPER_SRBit_Mask) << 4;
+        getBufferBuffer_uint8(stepperShiftRegister->bufferbuffer)->buffer[0]->buffer[shiftregNr] &= ~(STEPPER_SRBit_Mask << 4);
+        getBufferBuffer_uint8(stepperShiftRegister->bufferbuffer)->buffer[0]->buffer[shiftregNr] |= (stepper->position_motor & STEPPER_SRBit_Mask) << 4;
     }
     else
     {
-        stepperShiftRegister->bufferbuffer->buffer[0]->buffer[shiftregNr] &= ~(STEPPER_SRBit_Mask << 0);
-        stepperShiftRegister->bufferbuffer->buffer[0]->buffer[shiftregNr] |= (stepper->position_motor & STEPPER_SRBit_Mask) << 0;
+        getBufferBuffer_uint8(stepperShiftRegister->bufferbuffer)->buffer[0]->buffer[shiftregNr] &= ~(STEPPER_SRBit_Mask << 0);
+        getBufferBuffer_uint8(stepperShiftRegister->bufferbuffer)->buffer[0]->buffer[shiftregNr] |= (stepper->position_motor & STEPPER_SRBit_Mask) << 0;
     }
 }
 
@@ -121,8 +121,8 @@ static void stepTask()
     {
         // add some cycle (it doesn't matter how many cycles since it is repeated and checked each time
         task_mem[currentRunningTask].currentCycle = 2;
-        resetBuffer((Buffer_void*) stepperShiftRegister->bufferbuffer);
-        resetBuffer((Buffer_void*) stepperShiftRegister->bufferbuffer->buffer[0]);
+        resetBuffer(getBuffer_void(stepperShiftRegister->bufferbuffer));
+        resetBuffer((Buffer_void*) getBufferBuffer_uint8(stepperShiftRegister->bufferbuffer)->buffer[0]);
         noSROperation = SPI_activateSPIOperation(stepperShiftRegister, totalNumberOfBytes);
     }
 }

@@ -27,8 +27,16 @@ Task* g_SPI_task_activateShiftRegister = 0;
 /** task functions! */
 void SR_enableTransmission()
 {
-    USCI_enable_TXIFG(1);
-    USCI_enable_RXIFG(0);
+    if (spiOperation_mem[g_SPI_activeTransmission].operationMode & SPI_READ)
+    {
+        USCI_enable_TXIFG(1);
+        USCI_enable_RXIFG(1);
+    }
+    else
+    {
+        USCI_enable_TXIFG(1);
+        USCI_enable_RXIFG(0);
+    }
     enableUSCI_Interrupt();
 }
 
@@ -100,10 +108,11 @@ void SPI_initOperation(volatile unsigned char * writeAddress, volatile unsigned 
 
 SPIOperation* SPI_initSPIOperation(uint8_t strobePin, volatile uint8_t * strobePort, BufferBuffer_uint8* bufferbuffer, uint8_t strobeOperation)
 {
-	spiOperation_mem[spiOperation_size].bufferbuffer = bufferbuffer;
+	spiOperation_mem[spiOperation_size].bufferbuffer = BasicBuffer_getNumber( (Buffer_void*) bufferbuffer);
 	spiOperation_mem[spiOperation_size].operationMode = strobeOperation;
 	spiOperation_mem[spiOperation_size].bytesReceived = 0;
-	spiOperation_mem[spiOperation_size].bytesToProcess = 0;
+	spiOperation_mem[spiOperation_size].bytesToRead = 0;
+	spiOperation_mem[spiOperation_size].bytesToWrite = 0;
 	spiOperation_mem[spiOperation_size].strobePin.pin = strobePin;
 	spiOperation_mem[spiOperation_size].strobePin.port = strobePort;
 

@@ -15,6 +15,8 @@
  *
  *  2017 04 18
  *      add noRead to strobeOperation, bytes in the buffer are not overwritten by received bytes
+ *  2017 04 26
+ *      no mixed read write possible, split up interrupts, changed some bits
  */
 
 #ifndef SHIFTREGISTEROPERATION_H_
@@ -52,30 +54,31 @@ typedef struct SPIStrobe_t {
 /**
  * Shift Register Operation structure
  *  Fields:
- *      bufferbuffer: a pointer to a buffer array
+ *      bufferbuffer: the position in the buffer_void mem to be used
  *      operationMode: indicates the type of strobe signal and read/write operation:
- *          xTSE PRWa
+ *          PTSE xxRa
  *              T: strobe while transmission is active (Chip Enable)
  *              S: short strobe on start
  *              E: short strobe on end
  *              P: strobe polarity (1: active high, 0: active low)
- *              - no strobe signal when TSE are low
- *              R: read from interface (1: read and write to buffer, 0: no read)
- *              W: write to interface (1: read from buffer and write to interface, 0: 0x00 is transferred for each byte to process)
+ *              - no strobe signal when T, S, E are low
+ *              R: read from interface (1: Read only, no bytes are popped from the buffer, 0: Write only, no bytes are pushed to the buffer)
  *              a: activate Read: must not be modified from outside, Identifier that first write cycle complete, read byte ready in interface
  *
- *      bytesReceived: the number of bytes received while this SR is active, is reset to 0 when activated todo: not counted up
- *      bytesToProcess: the number of bytes left to be written, is set when activated
+ *      bytesReceived: the number of bytes received while this SR is active, is reset to 0 when activated
+ *      bytesToRead: the number of bytes to receive (only valid in read mode)
+ *      bytesToWrite: the number of bytes to write (valid in read and write mode)
  *      strobePin: structure with the pin and port to set
  *
  *  MEMORY:
- *      this structure takes up 8 bytes
+ *      this structure takes up 6 bytes + 1 pointer
  */
 typedef struct SPIOperation_t {
-    BufferBuffer_uint8* bufferbuffer;
+    int8_t bufferbuffer;
 	uint8_t operationMode;
 	uint8_t bytesReceived;
-	uint8_t bytesToProcess;
+	uint8_t bytesToRead;
+	uint8_t bytesToWrite;
 	SPIStrobe strobePin;
 } SPIOperation;
 
@@ -122,19 +125,19 @@ extern int8_t spiOperation_size;
  * do Read operation: when being transceived, the bytes read by the
  * interface do overwrite the buffer
  */
-#define SPI_DOREAD 0x04
+#define SPI_READ 0x02
 
 /**
  * do write operation: when being transceived, the buffer content is written
  * to the interface
  */
-#define SPI_DOWRITE 0x02
+//#define SPI_DOWRITE 0x02
 
 /**
  * activate read: set in SPI_nextByte_ActiveShiftRegister() and reset in SPI_activateSPIOperation()
  * do not modify the field operationMode with this bit
  */
-#define SPI_ACTIVATEREAD 0x01
+//#define SPI_ACTIVATEREAD 0x01
 
 /**
  * set the address to write to, i.e. the interface transfer buffer register the shift register is connected to.
@@ -196,7 +199,7 @@ SPIOperation* SPI_initSPIOperation(uint8_t strobePin, volatile uint8_t * strobeP
 static inline int8_t SPI_changeStrobeOperaton(SPIOperation* spiop, uint8_t strobeOperation) __attribute__((always_inline));
 static inline int8_t SPI_changeStrobeOperaton(SPIOperation* spiop, uint8_t strobeOperation)
 {
-    if (0 == spiop->bytesToProcess)
+    if (0 == spiop->bytesToWrite)
     {
         spiop->operationMode = strobeOperation;
         return 0;
@@ -206,6 +209,7 @@ static inline int8_t SPI_changeStrobeOperaton(SPIOperation* spiop, uint8_t strob
 
 /**
  * enables / disables the Read-Operation
+ * in read-operation, no bytes are written to the interface
  * @param spiop the spi operation structure to change
  * @param enable 0: the received bytes are not written to the buffer
  *               1: the received bytes are written to the buffer
@@ -216,31 +220,11 @@ static inline int8_t SPI_changeReadOperation(SPIOperation* spiop, uint8_t enable
 {
     if (enable)
     {
-        return SPI_changeStrobeOperaton(spiop, spiop->operationMode | SPI_DOREAD);
+        return SPI_changeStrobeOperaton(spiop, spiop->operationMode | SPI_READ);
     }
     else
     {
-        return SPI_changeStrobeOperaton(spiop, spiop->operationMode & ~SPI_DOREAD);
-    }
-}
-
-/**
- * enables / disables the Write-Operation
- * @param spiop the spi operation structure to change
- * @param enable 0: for each byte 0x00 is transferred
- *               1: the content of the buffer is transferred
- * @return -1 if the structure is being processed, 0 on success
- */
-static inline int8_t SPI_changeWriteOperation(SPIOperation* spiop, uint8_t enable) __attribute__((always_inline));
-static inline int8_t SPI_changeWriteOperation(SPIOperation* spiop, uint8_t enable)
-{
-    if (enable)
-    {
-        return SPI_changeStrobeOperaton(spiop, spiop->operationMode | SPI_DOWRITE);
-    }
-    else
-    {
-        return SPI_changeStrobeOperaton(spiop, spiop->operationMode & ~SPI_DOWRITE);
+        return SPI_changeStrobeOperaton(spiop, spiop->operationMode & ~SPI_READ);
     }
 }
 
@@ -274,10 +258,18 @@ static inline void SPI_scheduleStrobe()
 static inline int8_t SPI_nextByte_Write() __attribute__((always_inline));
 static inline int8_t SPI_nextByte_Write()
 {
-    if (spiOperation_mem[g_SPI_activeTransmission].operationMode & SPI_DOWRITE)
+    if (!(spiOperation_mem[g_SPI_activeTransmission].operationMode & SPI_READ))
     {
-        return BufferBuffer_uint8_get(spiOperation_mem[g_SPI_activeTransmission].bufferbuffer,
-                               SR_SPIinterface_writeAddress);
+        if (BufferBuffer_uint8_get(getBufferBuffer_uint8(spiOperation_mem[g_SPI_activeTransmission].bufferbuffer),
+                               SR_SPIinterface_writeAddress) != -1)
+        {
+            BufferBuffer_uint8_increment(getBufferBuffer_uint8(spiOperation_mem[g_SPI_activeTransmission].bufferbuffer));
+            return 0;
+        }
+        else
+        {
+            return -1;
+        }
     }
     else
     {
@@ -292,12 +284,13 @@ static inline int8_t SPI_nextByte_Write()
 static inline void SPI_nextByte_Read() __attribute__((always_inline));
 static inline void SPI_nextByte_Read()
 {
-    if (spiOperation_mem[g_SPI_activeTransmission].operationMode & SPI_DOREAD)
+    if (spiOperation_mem[g_SPI_activeTransmission].operationMode & SPI_READ)
     {
-        if (BufferBuffer_uint8_set(spiOperation_mem[g_SPI_activeTransmission].bufferbuffer,
+        if (BufferBuffer_uint8_set(getBufferBuffer_uint8(spiOperation_mem[g_SPI_activeTransmission].bufferbuffer),
                                SR_SPIinterface_readAddress) != -1)
         {
             spiOperation_mem[g_SPI_activeTransmission].bytesReceived += 1;
+            BufferBuffer_uint8_increment(getBufferBuffer_uint8(spiOperation_mem[g_SPI_activeTransmission].bufferbuffer));
             DEBUGPIN1_PORT ^= DEBUGPIN1;
             return;
         }
@@ -307,98 +300,24 @@ static inline void SPI_nextByte_Read()
 
 /**
  * interrupt service routine call
- * does a read / write operation depending on the mode of the active SPI Operation.
- * also changes the interrupt enable bits of the interface:
- *  - only write:
- *      the interrupt enable flags remain on for transfer interrupt,
- *      off for receive interrupt
- *  - only read and read + write:
- *      interrupt enable flags is set off for transfer interrupt,
- *      on for receive interrupt
- */
-static inline int8_t SPI_nextByte_ISR() __attribute__((always_inline));
-static inline int8_t SPI_nextByte_ISR()
-{
-    if (g_SPI_activeTransmission != -1)
-    {
-        if (spiOperation_mem[g_SPI_activeTransmission].bytesToProcess > 0)
-        {
-            spiOperation_mem[g_SPI_activeTransmission].bytesToProcess -= 1;
-            if (!(spiOperation_mem[g_SPI_activeTransmission].operationMode & SPI_ACTIVATEREAD))
-            {
-                spiOperation_mem[g_SPI_activeTransmission].operationMode |= SPI_ACTIVATEREAD;
-                if (spiOperation_mem[g_SPI_activeTransmission].operationMode & SPI_DOREAD)
-                {
-                    USCI_enable_TXIFG(0);
-                    USCI_enable_RXIFG(1);
-                }
-                if (SPI_nextByte_Write() == -1)
-                {
-                    g_SPI_activeTransmission = -1;
-                    return -1;
-                }
-
-                return 1;
-            }
-            else
-            {
-                SPI_nextByte_Read();
-                BufferBuffer_uint8_increment(spiOperation_mem[g_SPI_activeTransmission].bufferbuffer);
-
-                if (SPI_nextByte_Write() == -1)
-                {
-                    g_SPI_activeTransmission = -1;
-                    return -1;
-                }
-                return 1;
-            }
-        }
-        else
-        {
-            SPI_nextByte_Read();
-            SPI_scheduleStrobe();
-            return -1;
-        }
-    }
-    return -1;
-}
-
-/**
- * interrupt service routine call
  * reads the next byte and puts it into the active SPIOperation's buffer
  * if the buffer is full, a dummy read is initiated
  */
-static inline int8_t SPI_nextByte_ISR_read() __attribute__((always_inline));
-static inline int8_t SPI_nextByte_ISR_read()
+static inline void SPI_nextByte_ISR_read() __attribute__((always_inline));
+static inline void SPI_nextByte_ISR_read()
 {
     if (g_SPI_activeTransmission != -1)
     {
         SPI_nextByte_Read();
-
-        BufferBuffer_uint8_increment(spiOperation_mem[g_SPI_activeTransmission].bufferbuffer);
-
-        if (spiOperation_mem[g_SPI_activeTransmission].bytesToProcess > 0)
-        {
-            spiOperation_mem[g_SPI_activeTransmission].bytesToProcess -= 1;
-
-            if (SPI_nextByte_Write() == -1)
-            {
-                g_SPI_activeTransmission = -1;
-                return -1;
-            }
-
-            return 1;
-        }
-        else
+        spiOperation_mem[g_SPI_activeTransmission].bytesToRead -= 1;
+        if (spiOperation_mem[g_SPI_activeTransmission].bytesToRead == 0)
         {
             SPI_scheduleStrobe();
-            return -1;
         }
     }
     else
     {
         dummyReadByte = *SR_SPIinterface_readAddress;
-        return -1;
     }
 }
 
@@ -411,44 +330,28 @@ static inline int8_t SPI_nextByte_ISR_read()
 static inline int8_t SPI_nextByte_ISR_write() __attribute__((always_inline));
 static inline int8_t SPI_nextByte_ISR_write()
 {
-    int8_t retVal = -1;
     if (g_SPI_activeTransmission != -1)
     {
-        if (spiOperation_mem[g_SPI_activeTransmission].bytesToProcess > 0)
+        if (spiOperation_mem[g_SPI_activeTransmission].bytesToWrite > 0)
         {
-            if (!(spiOperation_mem[g_SPI_activeTransmission].operationMode & SPI_ACTIVATEREAD))
+            if (SPI_nextByte_Write() == -1)
             {
-                if (SPI_nextByte_Write() == -1)
-                {
-                    g_SPI_activeTransmission = -1;
-                    return -1;
-                }
-                spiOperation_mem[g_SPI_activeTransmission].operationMode |= SPI_ACTIVATEREAD;
-                USCI_enable_TXIFG(0);
-                USCI_enable_RXIFG(1);
-            }
-            else
-            {
+                g_SPI_activeTransmission = -1;
                 return -1;
             }
+            spiOperation_mem[g_SPI_activeTransmission].bytesToWrite -= 1;
+            return 0;
         }
         else
         {
-            if (spiOperation_mem[g_SPI_activeTransmission].operationMode & STROBE_ON_TRANSFER_END)
+            if (!(spiOperation_mem[g_SPI_activeTransmission].operationMode & SPI_READ))
             {
-                scheduleTask(g_SPI_task_strobeSet);
+                SPI_scheduleStrobe();
             }
-            else if (spiOperation_mem[g_SPI_activeTransmission].operationMode & STROBE_ON_TRANSFER)
-            {
-                scheduleTask(g_SPI_task_strobeReset);
-            }
-            else
-            {
-                g_SPI_activeTransmission = -1;
-            }
+            return -1;
         }
     }
-    return retVal;
+    return -1;
 }
 
 /**
@@ -467,9 +370,13 @@ static inline int8_t SPI_activateSPIOperation(SPIOperation* sr, uint8_t bytesToP
     if (g_SPI_activeTransmission == -1)
     {
         g_SPI_activeTransmission = sr - spiOperation_mem;
-        sr->bytesToProcess = bytesToProcess;
+        sr->bytesToWrite = bytesToProcess;
+        if (sr->operationMode & SPI_READ)
+        {
+            sr->bytesToRead = bytesToProcess;
+        }
         sr->bytesReceived = 0;
-        sr->operationMode &= ~SPI_ACTIVATEREAD;
+
         if (sr->operationMode & STROBE_ON_TRANSFER_START || sr->operationMode & STROBE_ON_TRANSFER)
         {
             scheduleTask(g_SPI_task_strobeSet);

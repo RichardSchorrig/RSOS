@@ -28,6 +28,8 @@ typedef struct Buffer_void_t {
 extern Buffer_void buffer_mem[MAXBUFFER_VOID];
 extern int8_t buffer_size;
 
+#define getBuffer_void(n) (&buffer_mem[n])
+
 /**
  * initialize a buffer containing the pointer data
  * the buffer size is set to length, the read bytes is set to 0
@@ -39,27 +41,14 @@ extern int8_t buffer_size;
  *
  * @return the initialized buffer
  */
-static inline Buffer_void* initBuffer(void* data, uint8_t length);
-static Buffer_void* initBuffer(void* data, uint8_t length) {
-    buffer_mem[buffer_size].buffer = data;
-    buffer_mem[buffer_size].size.size = length;
-    buffer_mem[buffer_size].size.readBytes = 0;
-    buffer_size += 1;
-    return &buffer_mem[buffer_size - 1];
-}
-
+Buffer_void* initBuffer(void* data, uint8_t length);
 
 /**
  * set a new memory location to the buffer, along with the size (of total elements storable)
  * @param buffer the buffer to set the new memory to
  * @param length the maximum number of elements to store
  */
-static inline void setBuffer(Buffer_void* buffer, void* data, uint8_t length);
-static void setBuffer(Buffer_void* buffer, void* data, uint8_t length) {
-    buffer->buffer = data;
-    buffer->size.size = length;
-    buffer->size.readBytes = 0;
-}
+void setBuffer(Buffer_void* buffer, void* data, uint8_t length);
 
 /**
  * set a new length to an existing buffer
@@ -67,38 +56,24 @@ static void setBuffer(Buffer_void* buffer, void* data, uint8_t length) {
  * @param buffer the buffer to set the new length to
  * @param length the new length which should be smaller than the allocated memory
  */
-static inline void setBufferLength(Buffer_void* buffer, uint8_t length);
-static void setBufferLength(Buffer_void* buffer, uint8_t length) {
-    buffer->size.size = length;
-    buffer->size.readBytes = 0;
-}
+void setBufferLength(Buffer_void* buffer, uint8_t length);
+
 
 /**
  * resets the buffer's position to 0
  * @param buffer the buffer to reset
  */
-static inline void resetBuffer(Buffer_void* buffer);
-static void resetBuffer(Buffer_void* buffer) {
+static inline void resetBuffer(Buffer_void* buffer) __attribute__((always_inline));
+static inline void resetBuffer(Buffer_void* buffer) {
     buffer->size.readBytes = 0;
 }
 
-
 /**
- * resets the number of read bytes to 0
- * @param buffer the buffer to reset
+ * returns the position of the buffer inside the buffer_mem array
+ * @param buffer the buffer
+ * @return the position of the buffer, -1 in case an invalid pointer was given
+ */
+int8_t BasicBuffer_getNumber(Buffer_void* buffer);
 
-static inline void reset_uint8(Buffer_uint8* buffer);
-static void reset_uint8(Buffer_uint8* buffer) {
-    buffer->size.readBytes = 0;
-}
-*/
-/**
- * resets a bufferbuffer
-
-static inline void reset_bufferbuffer_uint8(BufferBuffer_uint8* buffer);
-static void reset_bufferbuffer_uint8(BufferBuffer_uint8* buffer) {
-
-}
-*/
 #endif /* MAXBUFFER_VOID */
 #endif /* BUFFER_BASICBUFFER_H_ */

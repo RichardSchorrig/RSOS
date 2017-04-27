@@ -116,7 +116,7 @@ void DotMatrix_transferElement() {
 //            if ((dotMatrix_command_and_data_Buffer[0]->size.readBytes == dotMatrix_command_and_data_Buffer[0]->size.size) &&
 //                (dotMatrix_command_and_data_Buffer[1]->size.readBytes == dotMatrix_command_and_data_Buffer[1]->size.size))
 
-            if (dotMatrixSR->bytesToProcess == 0)
+            if (dotMatrixSR->bytesToWrite == 0)
             {
                 bufferlength = 0;
                 bufferlength += setCommandPosition(currentLine, currentDisplayElement->pos_x, dotMatrix_displayCommandBuffer, 0, 10);

@@ -27,6 +27,8 @@ typedef struct BufferBuffer_int8_t {
     BufferSize size;
 } BufferBuffer_int8;
 
+#define getBufferBuffer_int8(n) ((BufferBuffer_int8*)&buffer_mem[n])
+
 /**
  * structure of the buffer_uint8 buffer
  * takes up 4 byte in memory
@@ -35,6 +37,8 @@ typedef struct BufferBuffer_uint8_t {
     Buffer_uint8** buffer;
     BufferSize size;
 } BufferBuffer_uint8;
+
+#define getBufferBuffer_uint8(n) ((BufferBuffer_uint8*)&buffer_mem[n])
 
 /**
  * reads a byte from the buffer at the current position without incrementing to the next position
