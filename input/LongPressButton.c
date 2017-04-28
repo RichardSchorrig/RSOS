@@ -90,6 +90,7 @@ static inline void longPressButton_Disable(LongPressButton* btn) {
     btn->button->status |= Button_isActive;
     btn->status &= ~LongPressButton_isActive;
     btn->status |= LongPressButton_isReleased;
+    setTimer(timer_buttonWaitScheduler);
 }
 
 void longPressButtonWaitScheduler() {
