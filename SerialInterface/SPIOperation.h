@@ -128,18 +128,6 @@ extern int8_t spiOperation_size;
 #define SPI_READ 0x02
 
 /**
- * do write operation: when being transceived, the buffer content is written
- * to the interface
- */
-//#define SPI_DOWRITE 0x02
-
-/**
- * activate read: set in SPI_nextByte_ActiveShiftRegister() and reset in SPI_activateSPIOperation()
- * do not modify the field operationMode with this bit
- */
-//#define SPI_ACTIVATEREAD 0x01
-
-/**
  * set the address to write to, i.e. the interface transfer buffer register the shift register is connected to.
  * MSP Devices: something like UCA0TXBUF
  */
@@ -278,9 +266,6 @@ static inline int8_t SPI_nextByte_Write()
     }
 }
 
-#include <msp430.h>
-#define DEBUGPIN1 BIT6
-#define DEBUGPIN1_PORT P3OUT
 static inline void SPI_nextByte_Read() __attribute__((always_inline));
 static inline void SPI_nextByte_Read()
 {
@@ -291,7 +276,6 @@ static inline void SPI_nextByte_Read()
         {
             spiOperation_mem[g_SPI_activeTransmission].bytesReceived += 1;
             BufferBuffer_uint8_increment(getBufferBuffer_uint8(spiOperation_mem[g_SPI_activeTransmission].bufferbuffer));
-            DEBUGPIN1_PORT ^= DEBUGPIN1;
             return;
         }
     }
