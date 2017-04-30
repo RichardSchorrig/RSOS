@@ -97,6 +97,29 @@ typedef struct WaitTimer_t{
 
 extern int8_t timers_size;
 extern WaitTimer waitTimers_mem[MAXTIMERS];
+extern Task* task_waitScheduler;
+
+/**
+ * initialize the wait timer operation.
+ * Inits a task with priority 0 that schedules the
+ * waitScheduler. The waitScheduler is responsible for
+ * counting down the wait time and scheduling the tasks
+ *
+ * To operate, a free task structure is needed
+ * 1x Task
+ * consider the structures in your RSOSDefines
+ */
+void Timer_initOperation();
+
+/**
+ * to be called in a timer interrupt routine.
+ * The task task_waitScheduler is scheduled.
+ */
+static inline void Timer_ISR() __attribute__((always_inline));
+static inline void Timer_ISR()
+{
+    scheduleTask(task_waitScheduler);
+}
 
 /**
  * initializes a wait timer. Timer can schedule a Task on starting and on stop

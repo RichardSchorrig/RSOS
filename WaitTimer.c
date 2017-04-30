@@ -10,6 +10,15 @@
 
 #ifdef MAXTIMERS
 
+Task* task_waitScheduler = 0;
+
+void waitScheduler();
+
+void Timer_initOperation()
+{
+    task_waitScheduler = addTask(0, waitScheduler);
+}
+
 static inline uint16_t Timer_getExponentAndTime(uint16_t time) __attribute__((always_inline));;
 static inline uint16_t Timer_getExponentAndTime(uint16_t time) {
     uint16_t timeCpy = time;
