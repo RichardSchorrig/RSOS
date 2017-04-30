@@ -15,12 +15,13 @@ Task* g_task_stepperScheduler = 0;
 
 static void stepTask();
 
-void initStepperOperation(SPIOperation* operation)
+void initStepperOperation(SPIOperation* operation, uint8_t delayTicks)
 {
     stepperShiftRegister = operation;
     totalNumberOfBytes = getBufferBuffer_uint8(operation->bufferbuffer)->buffer[0]->size.size;
     g_task_stepperScheduler = addTask(STEPPER_SCHEDULERPRIORITY, stepTask);
     setTaskCyclic(g_task_stepperScheduler, 2);
+    setTaskDelay(g_task_stepperScheduler, delayTicks);
 }
 
 Stepper* initStepper(uint8_t shiftregisterPosition)

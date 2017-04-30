@@ -79,8 +79,9 @@ extern Task* g_task_stepperScheduler;
  * @param operation: an initialized SPIOperation pointer which also contains a bufferbuffer
  *          which contains 1 buffer_uint8
  *          which contains a byte array with sufficient bytes for all stepper motors
+ * @param delayTicks: the stepper task's delay. The task will be delayed for the number of ticks.
  */
-void initStepperOperation(SPIOperation* operation);
+void initStepperOperation(SPIOperation* operation, uint8_t delayTicks);
 
 /**
  * inits a step motor
