@@ -10,11 +10,16 @@
 /* exclude everything if not used */
 #ifdef MAXBUFFER_VOID
 
-Buffer_void* initBuffer(void* data, uint8_t length)
+Buffer_void buffer_mem[MAXBUFFER_VOID] = {0};
+int8_t buffer_size = 0;
+
+Buffer_void* initBuffer(void* data, uint8_t length, uint8_t type)
 {
     buffer_mem[buffer_size].buffer = data;
-    buffer_mem[buffer_size].size.size = length;
-    buffer_mem[buffer_size].size.readBytes = 0;
+    buffer_mem[buffer_size].data.size = length;
+    buffer_mem[buffer_size].data.type = type;
+    buffer_mem[buffer_size].index.index_pop = 0;
+    buffer_mem[buffer_size].index.index_put = 0;
     buffer_size += 1;
     return &buffer_mem[buffer_size - 1];
 }
@@ -22,14 +27,14 @@ Buffer_void* initBuffer(void* data, uint8_t length)
 void setBuffer(Buffer_void* buffer, void* data, uint8_t length)
 {
     buffer->buffer = data;
-    buffer->size.size = length;
-    buffer->size.readBytes = 0;
+    buffer->data.size = length;
+    resetBuffer(buffer);
 }
 
 void setBufferLength(Buffer_void* buffer, uint8_t length)
 {
-    buffer->size.size = length;
-    buffer->size.readBytes = 0;
+    buffer->data.size = length;
+    resetBuffer(buffer);
 }
 
 int8_t BasicBuffer_getNumber(Buffer_void* buffer)
@@ -44,8 +49,6 @@ int8_t BasicBuffer_getNumber(Buffer_void* buffer)
     }
     return -1;
 }
-
-
 
 #endif /* MAXBUFFER_VOID */
 
