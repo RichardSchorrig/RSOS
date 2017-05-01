@@ -61,20 +61,20 @@ static inline void Stepper_rotate(Stepper* stepper)
     if (stepper->position_motor & STEPPER_Counterclockwise)
     {
         switch (pos) {
-        case 0: pos = 2; break;
-        case 1: pos = 0; break;
-        case 2: pos = 3; stepper->position_needle_current -= 1; break;
-        case 3: pos = 1; break;
+        case 0: pos = 1; break;
+        case 1: pos = 3; stepper->position_needle_current -= 1; break;
+        case 2: pos = 0; break;
+        case 3: pos = 2; break;
         default: pos = 3; break;
         }
     }
     else
     {
         switch (pos) {
-        case 0: pos = 1; break;
-        case 1: pos = 3; stepper->position_needle_current += 1; break;
-        case 2: pos = 0; break;
-        case 3: pos = 2; break;
+        case 0: pos = 2; break;
+        case 1: pos = 0; break;
+        case 2: pos = 3; stepper->position_needle_current += 1; break;
+        case 3: pos = 1; break;
         default: pos = 3; break;
         }
     }
