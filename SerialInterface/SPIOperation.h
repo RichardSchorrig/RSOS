@@ -249,7 +249,7 @@ static inline int8_t SPI_nextByte_Write()
         if (BasicBuffer_uint8_get(getBuffer_void(spiOperation_mem[g_SPI_activeTransmission].buffer),
                                SR_SPIinterface_writeAddress) != -1)
         {
-            BasicBuffer_increment_index_put(getBuffer_void(spiOperation_mem[g_SPI_activeTransmission].buffer));
+            BasicBuffer_increment_index_pop(getBuffer_void(spiOperation_mem[g_SPI_activeTransmission].buffer));
             return 0;
         }
         else
@@ -273,7 +273,7 @@ static inline void SPI_nextByte_Read()
                                SR_SPIinterface_readAddress) != -1)
         {
             spiOperation_mem[g_SPI_activeTransmission].bytesReceived += 1;
-            BasicBuffer_increment_index_pop(getBuffer_void(spiOperation_mem[g_SPI_activeTransmission].buffer));
+            BasicBuffer_increment_index_put(getBuffer_void(spiOperation_mem[g_SPI_activeTransmission].buffer));
             return;
         }
     }
