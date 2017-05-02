@@ -156,7 +156,7 @@ static inline int8_t BufferBuffer_uint8_increment_index_pop(BufferBuffer_uint8* 
         return -1;
     }
 
-    if (Buffer_uint8_increment_index_put(buffer->buffer[buffer->index.index_pop]) == 0)
+    if (Buffer_uint8_increment_index_pop(buffer->buffer[buffer->index.index_pop]) == 0)
     {
         buffer->index.index_pop += 1;
     }
