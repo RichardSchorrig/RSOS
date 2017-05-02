@@ -14,9 +14,7 @@
 
 #include <msp430.h>
 
-#include "../buffer/BasicBuffer.h"
-#include "../buffer/Buffer_int8.h"
-#include "../buffer/BufferBuffer_int8.h"
+#include "../buffer/BasicBuffer_int8.h"
 #include <stdint.h>
 
 #include <HardwareAdaptionLayer.h>
@@ -38,10 +36,10 @@
  * when bytesToRead is 0, a NACK and stop condition is transferred.
  */
 typedef struct I2C_Data_t {
-    BufferBuffer_uint8* buffer;
+    uint8_t buffer;
     uint8_t bytesToWrite;
     uint8_t bytesToRead;
-    uint16_t slaveAddress;
+    uint8_t slaveAddress;
 //    uint8_t status;
 } I2C_Data;
 
@@ -95,7 +93,7 @@ void I2C_initOperation(volatile unsigned char * writeAddress, volatile unsigned 
  * @param buffer the buffer to use
  * @param slaveAddress the 7 digit right-justified address of the slave device
  */
-I2C_Data* I2C_initData(BufferBuffer_uint8* buffer, uint8_t slaveAddress);
+I2C_Data* I2C_initData(Buffer_void* buffer, uint8_t slaveAddress);
 
 static inline void I2C_error();
 static void I2C_error()
@@ -126,7 +124,8 @@ static int8_t I2C_nextByte() {
 
     if (i2c_data_mem[activeI2CTransmission].bytesToWrite > 0)
     {
-        BufferBuffer_uint8_set_getNext(i2c_data_mem[activeI2CTransmission].buffer, 0, i2c_writeAddress);
+        BasicBuffer_uint8_get( getBuffer_void(i2c_data_mem[activeI2CTransmission].buffer), i2c_writeAddress);
+        BasicBuffer_increment_index_pop(getBuffer_void(i2c_data_mem[activeI2CTransmission].buffer));
         i2c_data_mem[activeI2CTransmission].bytesToWrite -= 1;
         return 1;
     }
@@ -143,9 +142,8 @@ static int8_t I2C_nextByte() {
         else
         {
             uint8_t readByte = *i2c_readAddress;
-            BufferBuffer_uint8_set_getNext(i2c_data_mem[activeI2CTransmission].buffer, &readByte, 0);
-//            set_getNext_bufferbuffer_uint8(i2c_data_mem[activeI2CTransmission].buffer, i2c_readAddress, 0);
-//            UCB1IFG &= ~UCRXIFG;
+            BasicBuffer_uint8_set(getBuffer_void(i2c_data_mem[activeI2CTransmission].buffer), &readByte);
+            BasicBuffer_increment_index_put(getBuffer_void(i2c_data_mem[activeI2CTransmission].buffer));
             i2c_data_mem[activeI2CTransmission].bytesToRead -= 1;
         }
     }

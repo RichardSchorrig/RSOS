@@ -16,9 +16,9 @@ void I2C_initOperation(volatile unsigned char * writeAddress, volatile unsigned 
     I2C_initControlAddress(controlAddress);
 }
 
-I2C_Data* I2C_initData(BufferBuffer_uint8* buffer, uint8_t slaveAddress)
+I2C_Data* I2C_initData(Buffer_void* buffer, uint8_t slaveAddress)
 {
-    i2c_data_mem[i2c_data_size].buffer = buffer;
+    i2c_data_mem[i2c_data_size].buffer = BasicBuffer_getNumber(buffer);
     i2c_data_mem[i2c_data_size].slaveAddress = slaveAddress;
     i2c_data_mem[i2c_data_size].bytesToRead = 0;
     i2c_data_mem[i2c_data_size].bytesToWrite = 0;
