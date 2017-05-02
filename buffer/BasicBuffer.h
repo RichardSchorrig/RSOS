@@ -72,6 +72,12 @@ typedef struct Buffer_void_t {
     BufferIndex index;
 } Buffer_void;
 
+typedef struct BufferBuffer_void_t {
+    Buffer_void** buffer;
+    BufferData data;
+    BufferIndex index;
+} BufferBuffer_void;
+
 extern Buffer_void buffer_mem[MAXBUFFER_VOID];
 extern int8_t buffer_size;
 
@@ -115,12 +121,7 @@ void setBufferLength(Buffer_void* buffer, uint8_t length);
  * resets the buffer's position to 0
  * @param buffer the buffer to reset
  */
-static inline void resetBuffer(Buffer_void* buffer) __attribute__((always_inline));
-static inline void resetBuffer(Buffer_void* buffer)
-{
-    buffer->index.index_pop = 0;
-    buffer->index.index_put = 0;
-}
+void resetBuffer(Buffer_void* buffer);
 
 /**
  * returns the position of the buffer inside the buffer_mem array

@@ -37,6 +37,21 @@ void setBufferLength(Buffer_void* buffer, uint8_t length)
     resetBuffer(buffer);
 }
 
+void resetBuffer(Buffer_void* buffer)
+{
+    buffer->index.index_pop = 0;
+    buffer->index.index_put = 0;
+
+    if (buffer->data.type & BUFFER_TYPE_BUFFERBUFFER)
+    {
+        int8_t i;
+        for (i=buffer->data.size; i>0; i-=1)
+        {
+            resetBuffer(((BufferBuffer_void*)buffer)->buffer[i-1]);
+        }
+    }
+}
+
 int8_t BasicBuffer_getNumber(Buffer_void* buffer)
 {
     int8_t i;

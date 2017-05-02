@@ -22,10 +22,6 @@
 #ifndef STEPPER_H_
 #define STEPPER_H_
 
-/**
- * defines that all steppers are connected via a shift register instead of a direct connection
- */
-
 #include <RSOSDefines.h>
 
 /* exclude everything if not used */

@@ -50,32 +50,32 @@ static inline int8_t BasicBuffer_uint8_set(Buffer_void* buffer, const volatile u
 static inline int8_t BasicBuffer_int8_set(Buffer_void* buffer, const volatile uint8_t* source) __attribute__((always_inline));
 static inline int8_t BasicBuffer_int8_set(Buffer_void* buffer, const volatile uint8_t* source)
 {
-    return BasicBuffer_uint8_get(buffer, (const volatile uint8_t*) source);
+    return BasicBuffer_uint8_set(buffer, (const volatile uint8_t*) source);
 }
 
-static inline int8_t BasicBuffer_increment_index_put(Buffer_uint8* buffer) __attribute__((always_inline));
-static inline int8_t BasicBuffer_increment_index_put(Buffer_uint8* buffer)
+static inline int8_t BasicBuffer_increment_index_put(Buffer_void* buffer) __attribute__((always_inline));
+static inline int8_t BasicBuffer_increment_index_put(Buffer_void* buffer)
 {
     if (buffer->data.type & BUFFER_TYPE_BUFFERBUFFER)
     {
-        return BufferBuffer_increment_index_put((BufferBuffer_uint8*) buffer);
+        return BufferBuffer_uint8_increment_index_put((BufferBuffer_uint8*) buffer);
     }
     else
     {
-        return Buffer_increment_index_put((Buffer_uint8*) buffer);
+        return Buffer_uint8_increment_index_put((Buffer_uint8*) buffer);
     }
 }
 
-static inline int8_t BasicBuffer_increment_index_pop(Buffer_uint8* buffer) __attribute__((always_inline));
-static inline int8_t BasicBuffer_increment_index_pop(Buffer_uint8* buffer)
+static inline int8_t BasicBuffer_increment_index_pop(Buffer_void* buffer) __attribute__((always_inline));
+static inline int8_t BasicBuffer_increment_index_pop(Buffer_void* buffer)
 {
     if (buffer->data.type & BUFFER_TYPE_BUFFERBUFFER)
     {
-        return BufferBuffer_increment_index_pop((BufferBuffer_uint8*) buffer);
+        return BufferBuffer_uint8_increment_index_pop((BufferBuffer_uint8*) buffer);
     }
     else
     {
-        return Buffer_increment_index_pop((Buffer_uint8*) buffer);
+        return Buffer_uint8_increment_index_pop((Buffer_uint8*) buffer);
     }
 }
 

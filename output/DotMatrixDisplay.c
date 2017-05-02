@@ -36,10 +36,10 @@ static Task * dotMatrix_task_transferElement = 0;
 void DotMatrix_initDisplay(volatile uint8_t * port, uint8_t pin)
 {
 
-    dotMatrix_command_and_data_Buffer[0] = (Buffer_uint8*) initBuffer((void*)dotMatrix_displayCommandBuffer, 10);
-    dotMatrix_command_and_data_Buffer[1] = (Buffer_uint8*) initBuffer((void*)&dotMatrix_displayBuffer[0][0], DOTMATRIX_DISPLAY_XRES);
-    dotMatrix_dataBufferBuffer = (BufferBuffer_uint8*) initBuffer((void*) dotMatrix_command_and_data_Buffer, 2);
-	dotMatrixSR = SPI_initSPIOperation(pin, port, dotMatrix_dataBufferBuffer, STROBE_ON_TRANSFER | STROBE_POLARITY_LOW);
+    dotMatrix_command_and_data_Buffer[0] = (Buffer_uint8*) initBuffer((void*)dotMatrix_displayCommandBuffer, 10, BUFFER_TYPE_REGULAR);
+    dotMatrix_command_and_data_Buffer[1] = (Buffer_uint8*) initBuffer((void*)&dotMatrix_displayBuffer[0][0], DOTMATRIX_DISPLAY_XRES, BUFFER_TYPE_REGULAR);
+    dotMatrix_dataBufferBuffer = (BufferBuffer_uint8*) initBuffer((void*) dotMatrix_command_and_data_Buffer, 2, BUFFER_TYPE_BUFFERBUFFER);
+	dotMatrixSR = SPI_initSPIOperation(pin, port, (Buffer_void*)dotMatrix_dataBufferBuffer, STROBE_ON_TRANSFER | STROBE_POLARITY_LOW);
 
 	dotMatrix_task_transferElement = addTask(1, DotMatrix_transferElement);
 	setTaskCyclic(dotMatrix_task_transferElement, 2);

@@ -76,11 +76,13 @@ extern Task* g_task_stepperScheduler;
  *
  * to operate, 1x Task is needed
  *
- * @param operation: an initialized SPIOperation pointer which also contains a bufferbuffer
- *          which contains 1 buffer_uint8
- *          which contains a byte array with sufficient bytes for all stepper motors
+ * @param operation: an initialized SPIOperation pointer, which is used to activate the stepper
+ * @param dataBuffer: the buffer connected to the SPIOperation's buffer, the buffer is modified
+ *                    during the stepper operation, but can be shared and modified if other periphery
+ *                    is connected to the shift register
+ * @param numberOfBytes: the length of dataBuffer
  */
-void initStepperOperation(SPIOperation* operation);
+void initStepperOperation(SPIOperation* operation, uint8_t* dataBuffer, uint8_t numberOfBytes);
 
 /**
  * inits a step motor

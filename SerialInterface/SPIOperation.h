@@ -31,9 +31,7 @@
 #include <msp430.h>
 #include <stdint.h>
 #include "../Task.h"
-#include "../buffer/BasicBuffer.h"
-#include "../buffer/Buffer_int8.h"
-#include "../buffer/BufferBuffer_int8.h"
+#include "../buffer/BasicBuffer_int8.h"
 
 extern volatile unsigned char * SR_SPIinterface_readAddress;
 extern volatile unsigned char * SR_SPIinterface_writeAddress;
@@ -54,7 +52,7 @@ typedef struct SPIStrobe_t {
 /**
  * Shift Register Operation structure
  *  Fields:
- *      bufferbuffer: the position in the buffer_void mem to be used
+ *      buffer: the position in the buffer_void_mem to be used
  *      operationMode: indicates the type of strobe signal and read/write operation:
  *          PTSE xxRa
  *              T: strobe while transmission is active (Chip Enable)
@@ -74,7 +72,7 @@ typedef struct SPIStrobe_t {
  *      this structure takes up 6 bytes + 1 pointer
  */
 typedef struct SPIOperation_t {
-    int8_t bufferbuffer;
+    int8_t buffer;
 	uint8_t operationMode;
 	uint8_t bytesReceived;
 	uint8_t bytesToRead;
@@ -160,7 +158,7 @@ void SPI_initOperation(volatile unsigned char * writeAddress, volatile unsigned 
  * creates a new SPI operation structure
  * @param strobePin: a number indicating the pin for the strobe input
  * of the shift register
- * @param bufferbuffer: the buffer memory pointer to be used
+ * @param buffer: the buffer memory index to be used, can be a bufferbuffer, ring buffer or regular buffer
  * @param bufferLength: the maximum length of the buffer
  * @param operationMode: the operation mode for the strobe pin and read /write handling.
  *  The byte contains the mode and polarity of the strobe signal:
@@ -176,7 +174,7 @@ void SPI_initOperation(volatile unsigned char * writeAddress, volatile unsigned 
  *      - Write enable
  * @return: the initialized structure pointer
  */
-SPIOperation* SPI_initSPIOperation(uint8_t strobePin, volatile uint8_t * strobePort, BufferBuffer_uint8* bufferbuffer, uint8_t operationMode);
+SPIOperation* SPI_initSPIOperation(uint8_t strobePin, volatile uint8_t * strobePort, Buffer_void* buffer, uint8_t operationMode);
 
 /**
  * changes the SPI operation strobe mode
@@ -248,10 +246,10 @@ static inline int8_t SPI_nextByte_Write()
 {
     if (!(spiOperation_mem[g_SPI_activeTransmission].operationMode & SPI_READ))
     {
-        if (BufferBuffer_uint8_get(getBufferBuffer_uint8(spiOperation_mem[g_SPI_activeTransmission].bufferbuffer),
+        if (BasicBuffer_uint8_get(getBuffer_void(spiOperation_mem[g_SPI_activeTransmission].buffer),
                                SR_SPIinterface_writeAddress) != -1)
         {
-            BufferBuffer_uint8_increment(getBufferBuffer_uint8(spiOperation_mem[g_SPI_activeTransmission].bufferbuffer));
+            BasicBuffer_increment_index_put(getBuffer_void(spiOperation_mem[g_SPI_activeTransmission].buffer));
             return 0;
         }
         else
@@ -271,11 +269,11 @@ static inline void SPI_nextByte_Read()
 {
     if (spiOperation_mem[g_SPI_activeTransmission].operationMode & SPI_READ)
     {
-        if (BufferBuffer_uint8_set(getBufferBuffer_uint8(spiOperation_mem[g_SPI_activeTransmission].bufferbuffer),
+        if (BasicBuffer_uint8_set(getBuffer_void(spiOperation_mem[g_SPI_activeTransmission].buffer),
                                SR_SPIinterface_readAddress) != -1)
         {
             spiOperation_mem[g_SPI_activeTransmission].bytesReceived += 1;
-            BufferBuffer_uint8_increment(getBufferBuffer_uint8(spiOperation_mem[g_SPI_activeTransmission].bufferbuffer));
+            BasicBuffer_increment_index_pop(getBuffer_void(spiOperation_mem[g_SPI_activeTransmission].buffer));
             return;
         }
     }
