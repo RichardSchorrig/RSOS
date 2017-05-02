@@ -106,9 +106,9 @@ void SPI_initOperation(volatile unsigned char * writeAddress, volatile unsigned 
 	g_SPI_task_strobeReset = addTask(SHIFTREGISTER_STROBERESET_PRIORITY, task_strobe_reset);
 }
 
-SPIOperation* SPI_initSPIOperation(uint8_t strobePin, volatile uint8_t * strobePort, BufferBuffer_uint8* bufferbuffer, uint8_t strobeOperation)
+SPIOperation* SPI_initSPIOperation(uint8_t strobePin, volatile uint8_t * strobePort, Buffer_void* buffer, uint8_t strobeOperation)
 {
-	spiOperation_mem[spiOperation_size].bufferbuffer = BasicBuffer_getNumber( (Buffer_void*) bufferbuffer);
+	spiOperation_mem[spiOperation_size].buffer = BasicBuffer_getNumber( (Buffer_void*) buffer);
 	spiOperation_mem[spiOperation_size].operationMode = strobeOperation;
 	spiOperation_mem[spiOperation_size].bytesReceived = 0;
 	spiOperation_mem[spiOperation_size].bytesToRead = 0;

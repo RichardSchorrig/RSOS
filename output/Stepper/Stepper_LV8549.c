@@ -11,14 +11,16 @@
 
 static SPIOperation* stepperShiftRegister = 0;
 static uint8_t totalNumberOfBytes = 0;
+static uint8_t* stepperDataBuffer = 0;
 Task* g_task_stepperScheduler = 0;
 
 static void stepTask();
 
-void initStepperOperation(SPIOperation* operation, uint8_t delayTicks)
+void initStepperOperation(SPIOperation* operation, uint8_t* dataBuffer, uint8_t numberOfBytes, uint8_t delayTicks)
 {
     stepperShiftRegister = operation;
-    totalNumberOfBytes = getBufferBuffer_uint8(operation->bufferbuffer)->buffer[0]->size.size;
+    totalNumberOfBytes = numberOfBytes;
+    stepperDataBuffer = dataBuffer;
     g_task_stepperScheduler = addTask(STEPPER_SCHEDULERPRIORITY, stepTask);
     setTaskCyclic(g_task_stepperScheduler, 2);
     setTaskDelay(g_task_stepperScheduler, delayTicks);
@@ -44,13 +46,13 @@ static inline void toggleShiftRegister(Stepper* stepper)
     unsigned char shiftregNr = (stepper->shiftRegisterPosition) >> 1;
     if ((stepper->shiftRegisterPosition) & 0x01)
     {
-        getBufferBuffer_uint8(stepperShiftRegister->bufferbuffer)->buffer[0]->buffer[shiftregNr] &= ~(STEPPER_SRBit_Mask << 4);
-        getBufferBuffer_uint8(stepperShiftRegister->bufferbuffer)->buffer[0]->buffer[shiftregNr] |= (stepper->position_motor & STEPPER_SRBit_Mask) << 4;
+        stepperDataBuffer[shiftregNr] &= ~(STEPPER_SRBit_Mask << 4);
+        stepperDataBuffer[shiftregNr] |= (stepper->position_motor & STEPPER_SRBit_Mask) << 4;
     }
     else
     {
-        getBufferBuffer_uint8(stepperShiftRegister->bufferbuffer)->buffer[0]->buffer[shiftregNr] &= ~(STEPPER_SRBit_Mask << 0);
-        getBufferBuffer_uint8(stepperShiftRegister->bufferbuffer)->buffer[0]->buffer[shiftregNr] |= (stepper->position_motor & STEPPER_SRBit_Mask) << 0;
+        stepperDataBuffer[shiftregNr] &= ~(STEPPER_SRBit_Mask << 0);
+        stepperDataBuffer[shiftregNr] |= (stepper->position_motor & STEPPER_SRBit_Mask) << 0;
     }
 }
 
@@ -122,8 +124,7 @@ static void stepTask()
     {
         // add some cycle (it doesn't matter how many cycles since it is repeated and checked each time
         task_mem[currentRunningTask].currentCycle = 2;
-        resetBuffer(getBuffer_void(stepperShiftRegister->bufferbuffer));
-        resetBuffer((Buffer_void*) getBufferBuffer_uint8(stepperShiftRegister->bufferbuffer)->buffer[0]);
+        resetBuffer(getBuffer_void(stepperShiftRegister->buffer));
         noSROperation = SPI_activateSPIOperation(stepperShiftRegister, totalNumberOfBytes);
     }
 }
