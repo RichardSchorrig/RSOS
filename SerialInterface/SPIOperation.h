@@ -54,14 +54,15 @@ typedef struct SPIStrobe_t {
  *  Fields:
  *      buffer: the position in the buffer_void_mem to be used
  *      operationMode: indicates the type of strobe signal and read/write operation:
- *          PTSE xxRa
+ *          PTSE xxRW
+ *              P: strobe polarity (1: active high, 0: active low)
  *              T: strobe while transmission is active (Chip Enable)
  *              S: short strobe on start
  *              E: short strobe on end
- *              P: strobe polarity (1: active high, 0: active low)
+ *
  *              - no strobe signal when T, S, E are low
- *              R: read from interface (1: Read only, no bytes are popped from the buffer, 0: Write only, no bytes are pushed to the buffer)
- *              a: activate Read: must not be modified from outside, Identifier that first write cycle complete, read byte ready in interface
+ *              R: read from interface (1: Read enabled, bytes overwrite the contents of the buffer; 0: Write only, no bytes are put to the buffer)
+ *              W: write to the interface (1: Write enabled, bytes from the buffer are written to the interface; 0: for every cycle, 0x00 is transferred)
  *
  *      bytesReceived: the number of bytes received while this SR is active, is reset to 0 when activated
  *      bytesToRead: the number of bytes to receive (only valid in read mode)
@@ -111,7 +112,7 @@ extern int8_t spiOperation_size;
  * strobe polarity active high
  * strobe active is logic high, strobe inactive is pulled low
  */
-#define STROBE_POLARITY_HIGH 0x08
+#define STROBE_POLARITY_HIGH 0x80
 
 /**
  * strobe polarity active low
@@ -124,6 +125,12 @@ extern int8_t spiOperation_size;
  * interface do overwrite the buffer
  */
 #define SPI_READ 0x02
+
+/**
+ * do Write operation: the bytes are read from the buffer and written
+ * to the interface
+ */
+#define SPI_WRITE 0x01
 
 /**
  * set the address to write to, i.e. the interface transfer buffer register the shift register is connected to.
@@ -195,7 +202,6 @@ static inline int8_t SPI_changeStrobeOperaton(SPIOperation* spiop, uint8_t strob
 
 /**
  * enables / disables the Read-Operation
- * in read-operation, no bytes are written to the interface
  * @param spiop the spi operation structure to change
  * @param enable 0: the received bytes are not written to the buffer
  *               1: the received bytes are written to the buffer
@@ -211,6 +217,26 @@ static inline int8_t SPI_changeReadOperation(SPIOperation* spiop, uint8_t enable
     else
     {
         return SPI_changeStrobeOperaton(spiop, spiop->operationMode & ~SPI_READ);
+    }
+}
+
+/**
+ * enables / disables the write Operation
+ * @param spiop the spi operation structure to change
+ * @param enable 0: for each transmit interrupt, 0x00 is written to the interface
+ *               1: the bytes from the buffer are written to the interface
+ * @return -1 if the structure is being processed, 0 on success
+ */
+static inline int8_t SPI_changeWriteOperation(SPIOperation* spiop, uint8_t enable) __attribute__((always_inline));
+static inline int8_t SPI_changeWriteOperation(SPIOperation* spiop, uint8_t enable)
+{
+    if (enable)
+    {
+        return SPI_changeStrobeOperaton(spiop, spiop->operationMode | SPI_WRITE);
+    }
+    else
+    {
+        return SPI_changeStrobeOperaton(spiop, spiop->operationMode & ~SPI_WRITE);
     }
 }
 
@@ -244,7 +270,7 @@ static inline void SPI_scheduleStrobe()
 static inline int8_t SPI_nextByte_Write() __attribute__((always_inline));
 static inline int8_t SPI_nextByte_Write()
 {
-    if (!(spiOperation_mem[g_SPI_activeTransmission].operationMode & SPI_READ))
+    if (spiOperation_mem[g_SPI_activeTransmission].operationMode & SPI_WRITE)
     {
         if (BasicBuffer_uint8_get(getBuffer_void(spiOperation_mem[g_SPI_activeTransmission].buffer),
                                SR_SPIinterface_writeAddress) != -1)
