@@ -16,6 +16,10 @@
  * 		if status is inactive
  * 		changed function stopTimer(): deactivates timer before activating again to comply
  * 		with changes to setTimer()
+ * 2017 05 04
+ *      added flag WAITTIMER_TASK to identify that the waitScheduler is called from the task
+ *      scheduler. if WAITTIMER_TASK is not defined, the waitScheduler is run directly in
+ *      the timer ISR
  */
 
 #ifndef WAITTIMER_H_
