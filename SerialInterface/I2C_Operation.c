@@ -9,6 +9,8 @@
 
 #ifdef I2CDATASIZE
 
+volatile uint8_t g_I2C_dummyReadByte = 0;
+
 void I2C_initOperation(volatile unsigned char * writeAddress, volatile unsigned char * readAddress, volatile unsigned char * controlAddress)
 {
     I2C_initWriteAddress(writeAddress);

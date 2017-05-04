@@ -52,6 +52,7 @@ extern int8_t activeI2CTransmission;
 extern volatile unsigned char * i2c_readAddress;
 extern volatile unsigned char * i2c_writeAddress;
 extern volatile unsigned char * i2c_controlAddress;
+extern volatile uint8_t g_I2C_dummyReadByte;
 
 /**
  * identifier is active: the currently transferred I2COperation is
@@ -69,8 +70,9 @@ extern volatile unsigned char * i2c_controlAddress;
  * set the address to write to.
  * MSP Devices: something like UCA0TXBUF
  */
-static inline void I2C_initWriteAddress(volatile unsigned char * address);
-static void I2C_initWriteAddress(volatile unsigned char * address) {
+static inline void I2C_initWriteAddress(volatile unsigned char * address) __attribute__((always_inline));
+static inline void I2C_initWriteAddress(volatile unsigned char * address)
+{
     i2c_writeAddress = address;
 }
 
@@ -78,8 +80,9 @@ static void I2C_initWriteAddress(volatile unsigned char * address) {
  * set the address to read from.
  * MSP Devices: something like UCA0RXBUF
  */
-static inline void I2C_initReadAddress(volatile unsigned char * address);
-static void I2C_initReadAddress(volatile unsigned char * address) {
+static inline void I2C_initReadAddress(volatile unsigned char * address) __attribute__((always_inline));
+static inline void I2C_initReadAddress(volatile unsigned char * address)
+{
     i2c_readAddress = address;
 }
 
@@ -87,8 +90,9 @@ static void I2C_initReadAddress(volatile unsigned char * address) {
  * set the address to control the interface.
  * MSP Devices: something like UCA0CTL1
  */
-static inline void I2C_initControlAddress(volatile unsigned char * address);
-void I2C_initControlAddress(volatile unsigned char * address) {
+static inline void I2C_initControlAddress(volatile unsigned char * address) __attribute__((always_inline));
+static inline void I2C_initControlAddress(volatile unsigned char * address)
+{
     i2c_controlAddress = address;
 }
 
@@ -126,16 +130,91 @@ static inline uint8_t I2C_isActive(I2C_Data* data)
     }
 }
 
-static inline void I2C_error();
-static void I2C_error()
+static inline void I2C_error() __attribute__((always_inline));
+static inline void I2C_error()
 {
     if (activeI2CTransmission != -1)
     {
         i2c_data_mem[activeI2CTransmission].bytesToRead = 0;
         i2c_data_mem[activeI2CTransmission].bytesToWrite = 0;
+
         activeI2CTransmission = -1;
     }
 }
+
+/**
+ * interrupt service routine call
+ * writes the next byte from the buffer to the interface
+ * returns 1 in case another byte is available, 0 if the mode
+ * is changed to receive (bytes to write is 0 and bytes to read != 0)
+ * returns -1 if done (also clears interrupt flag)
+ */
+static inline int8_t I2C_nextByte_ISR_write() __attribute__((always_inline));
+static inline int8_t I2C_nextByte_ISR_write()
+{
+    if (activeI2CTransmission != -1)
+    {
+        if (i2c_data_mem[activeI2CTransmission].bytesToWrite > 0)
+        {
+            BasicBuffer_uint8_get( getBuffer_void(i2c_data_mem[activeI2CTransmission].buffer), i2c_writeAddress);
+            BasicBuffer_increment_index_pop(getBuffer_void(i2c_data_mem[activeI2CTransmission].buffer));
+            i2c_data_mem[activeI2CTransmission].bytesToWrite -= 1;
+            return 1;
+        }
+        else if (i2c_data_mem[activeI2CTransmission].bytesToRead != 0)
+        {
+            I2C_unsetInterruptFlag(I2C_IFG_TX);
+            I2C_setReceive();
+            I2C_setStart();
+            return 0;
+        }
+        else
+        {
+            I2C_unsetInterruptFlag(I2C_IFG_TX);
+            I2C_setStop();
+            i2c_data_mem[activeI2CTransmission].slaveAddress &= ~I2C_ISACTIVE;
+            activeI2CTransmission = -1;
+            return -1;
+        }
+    }
+}
+
+/**
+ * interrupt service routine call
+ * reads the next byte from the interface into the buffer
+ * returns 1 in case another byte is to read,
+ * returns -1 if done (also clears interrupt flag and does dummy read)
+ */
+static inline int8_t I2C_nextByte_ISR_read() __attribute__((always_inline));
+static inline int8_t I2C_nextByte_ISR_read()
+{
+    if (activeI2CTransmission != -1)
+    {
+        if (i2c_data_mem[activeI2CTransmission].bytesToRead > 0)
+        {
+            if (BasicBuffer_uint8_set(getBuffer_void(i2c_data_mem[activeI2CTransmission].buffer), i2c_readAddress) != -1)
+            {
+                BasicBuffer_increment_index_put(getBuffer_void(i2c_data_mem[activeI2CTransmission].buffer));
+            }
+            i2c_data_mem[activeI2CTransmission].bytesToRead -= 1;
+
+        }
+        if (i2c_data_mem[activeI2CTransmission].bytesToRead == 0)
+        {
+            I2C_setStop();
+            i2c_data_mem[activeI2CTransmission].slaveAddress &= ~I2C_ISACTIVE;
+            activeI2CTransmission = -1;
+            return -1;
+        }
+        else
+        {
+            return 1;
+        }
+    }
+    g_I2C_dummyReadByte = *i2c_readAddress;
+    I2C_setStop();
+}
+
 /**
  * interrupt service routine call
  * handles the next byte in the buffer (either write the byte to the transfer address
@@ -143,8 +222,9 @@ static void I2C_error()
  * returns 1 in case another byte is available for reading / writing
  * also handles repeated start, stop, NACK/ACK actions
  */
-static inline int8_t I2C_nextByte();
-static int8_t I2C_nextByte() {
+static inline int8_t I2C_nextByte() __attribute__((always_inline));
+static inline int8_t I2C_nextByte()
+{
 
     if (activeI2CTransmission == -1)
     {
@@ -200,8 +280,8 @@ static int8_t I2C_nextByte() {
  * identifies the activated data.
  * you want to check the return value. if -1 is returned, try again in the next cycle
  */
-static inline int8_t I2C_activateData(I2C_Data* data, uint8_t bytesToWrite, uint8_t bytesToRead);
-static int8_t I2C_activateData(I2C_Data* data, uint8_t bytesToWrite, uint8_t bytesToRead)
+static inline int8_t I2C_activateData(I2C_Data* data, uint8_t bytesToWrite, uint8_t bytesToRead) __attribute__((always_inline));
+static inline int8_t I2C_activateData(I2C_Data* data, uint8_t bytesToWrite, uint8_t bytesToRead)
 {
     if (activeI2CTransmission != -1)
     {
