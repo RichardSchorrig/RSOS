@@ -25,6 +25,7 @@
  *      buffer: the buffer for data to read from / write to
  *      bytesToWrite: the number of bytes to transmit
  *      bytesToRead: the number of bytes to read
+ *      slaveAddress: the address of the slave. only 7Bit address is supported
  *
  * if an instance is activated, the slave address is transferred to the slave address register.
  * if bytes to write is not equal 0, the interface is set to write.
@@ -51,6 +52,18 @@ extern int8_t activeI2CTransmission;
 extern volatile unsigned char * i2c_readAddress;
 extern volatile unsigned char * i2c_writeAddress;
 extern volatile unsigned char * i2c_controlAddress;
+
+/**
+ * identifier is active: the currently transferred I2COperation is
+ * marked with this bit in the field slaveAddress (because the address
+ * is only 7 Bit)
+ */
+#define I2C_ISACTIVE 0x80
+
+/**
+ * the address mask to mask the address from the slaveAddress field
+ */
+#define I2C_addressMask 0x7F
 
 /**
  * set the address to write to.
@@ -94,6 +107,24 @@ void I2C_initOperation(volatile unsigned char * writeAddress, volatile unsigned 
  * @param slaveAddress the 7 digit right-justified address of the slave device
  */
 I2C_Data* I2C_initData(Buffer_void* buffer, uint8_t slaveAddress);
+
+/**
+ * checks if the I2C operation is currently active
+ * @param data: the operation to check
+ * @return 0 if not active, 1 if active
+ */
+static inline uint8_t I2C_isActive(I2C_Data* data) __attribute__((always_inline));
+static inline uint8_t I2C_isActive(I2C_Data* data)
+{
+    if (data->slaveAddress & I2C_ISACTIVE)
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
+}
 
 static inline void I2C_error();
 static void I2C_error()
@@ -152,6 +183,7 @@ static int8_t I2C_nextByte() {
     {
         *i2c_controlAddress |= UCTXSTP;
         UCB1IFG &= ~UCTXIFG;
+        i2c_data_mem[activeI2CTransmission].slaveAddress &= ~I2C_ISACTIVE;
         activeI2CTransmission = -1;
         return -1;
     }
@@ -190,7 +222,10 @@ static int8_t I2C_activateData(I2C_Data* data, uint8_t bytesToWrite, uint8_t byt
         data->bytesToRead = bytesToRead;
         data->bytesToWrite = bytesToWrite;
 
-        I2C_setSlaveAddress(data->slaveAddress);
+        I2C_setSlaveAddress(data->slaveAddress & I2C_addressMask);
+
+        data->slaveAddress |= I2C_ISACTIVE;
+
         if (bytesToWrite != 0)
         {
             *i2c_controlAddress |= UCTR;
