@@ -137,7 +137,7 @@ static inline void I2C_error()
     {
         i2c_data_mem[activeI2CTransmission].bytesToRead = 0;
         i2c_data_mem[activeI2CTransmission].bytesToWrite = 0;
-
+        i2c_data_mem[activeI2CTransmission].slaveAddress &= ~I2C_ISACTIVE;
         activeI2CTransmission = -1;
     }
 }
