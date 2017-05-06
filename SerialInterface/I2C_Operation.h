@@ -140,14 +140,17 @@ static inline void I2C_error()
         i2c_data_mem[activeI2CTransmission].slaveAddress &= ~I2C_ISACTIVE;
         activeI2CTransmission = -1;
     }
+    I2C_setStop();
 }
 
 /**
  * interrupt service routine call
  * writes the next byte from the buffer to the interface
- * returns 1 in case another byte is available, 0 if the mode
- * is changed to receive (bytes to write is 0 and bytes to read != 0)
- * returns -1 if done (also clears interrupt flag)
+ * @return:
+ *      1 in case another byte is available
+ *      0 if no byte is transferred (if bytesToRead is not 0, then direction of the
+ *        interface is changed and a repeated start condition is sent)
+ *     -1 in case of error (no active Transmission, buffer is empty), Transfer interrupt flag is not cleared
  */
 static inline int8_t I2C_nextByte_ISR_write() __attribute__((always_inline));
 static inline int8_t I2C_nextByte_ISR_write()
@@ -156,10 +159,17 @@ static inline int8_t I2C_nextByte_ISR_write()
     {
         if (i2c_data_mem[activeI2CTransmission].bytesToWrite > 0)
         {
-            BasicBuffer_uint8_get( getBuffer_void(i2c_data_mem[activeI2CTransmission].buffer), i2c_writeAddress);
-            BasicBuffer_increment_index_pop(getBuffer_void(i2c_data_mem[activeI2CTransmission].buffer));
-            i2c_data_mem[activeI2CTransmission].bytesToWrite -= 1;
-            return 1;
+            if (BasicBuffer_uint8_get( getBuffer_void(i2c_data_mem[activeI2CTransmission].buffer), &I2C_WRITEADDRESS) != -1)
+            {
+                BasicBuffer_increment_index_pop(getBuffer_void(i2c_data_mem[activeI2CTransmission].buffer));
+                i2c_data_mem[activeI2CTransmission].bytesToWrite -= 1;
+                return 1;
+            }
+            else
+            {
+                i2c_data_mem[activeI2CTransmission].slaveAddress &= ~I2C_ISACTIVE;
+                activeI2CTransmission = -1;
+            }
         }
         else if (i2c_data_mem[activeI2CTransmission].bytesToRead != 0)
         {
@@ -174,16 +184,21 @@ static inline int8_t I2C_nextByte_ISR_write()
             I2C_setStop();
             i2c_data_mem[activeI2CTransmission].slaveAddress &= ~I2C_ISACTIVE;
             activeI2CTransmission = -1;
-            return -1;
+            return 0;
         }
     }
+    I2C_unsetInterruptFlag(I2C_IFG_TX);
+    I2C_setStop();
+    return -1;
 }
 
 /**
  * interrupt service routine call
  * reads the next byte from the interface into the buffer
- * returns 1 in case another byte is to read,
- * returns -1 if done (also clears interrupt flag and does dummy read)
+ * @return:
+ *      1 in case another byte is to read
+ *      0 if transmission is done (stop condition is initiated)
+ *     -1 on error, the received byte is still read
  */
 static inline int8_t I2C_nextByte_ISR_read() __attribute__((always_inline));
 static inline int8_t I2C_nextByte_ISR_read()
@@ -192,27 +207,33 @@ static inline int8_t I2C_nextByte_ISR_read()
     {
         if (i2c_data_mem[activeI2CTransmission].bytesToRead > 0)
         {
-            if (BasicBuffer_uint8_set(getBuffer_void(i2c_data_mem[activeI2CTransmission].buffer), i2c_readAddress) != -1)
+            if (BasicBuffer_uint8_set(getBuffer_void(i2c_data_mem[activeI2CTransmission].buffer), &I2C_READADDRESS) != -1)
             {
                 BasicBuffer_increment_index_put(getBuffer_void(i2c_data_mem[activeI2CTransmission].buffer));
+                i2c_data_mem[activeI2CTransmission].bytesToRead -= 1;
+                if (i2c_data_mem[activeI2CTransmission].bytesToRead == 0)
+                {
+                    I2C_setStop();
+                    i2c_data_mem[activeI2CTransmission].slaveAddress &= ~I2C_ISACTIVE;
+                    activeI2CTransmission = -1;
+                    return 0;
+                }
+                else
+                {
+                    return 1;
+                }
             }
-            i2c_data_mem[activeI2CTransmission].bytesToRead -= 1;
-
-        }
-        if (i2c_data_mem[activeI2CTransmission].bytesToRead == 0)
-        {
-            I2C_setStop();
-            i2c_data_mem[activeI2CTransmission].slaveAddress &= ~I2C_ISACTIVE;
-            activeI2CTransmission = -1;
-            return -1;
-        }
-        else
-        {
-            return 1;
+            else
+            {
+                i2c_data_mem[activeI2CTransmission].slaveAddress &= ~I2C_ISACTIVE;
+                activeI2CTransmission = -1;
+            }
         }
     }
-    g_I2C_dummyReadByte = *i2c_readAddress;
+    g_I2C_dummyReadByte = I2C_READADDRESS;
+    I2C_unsetInterruptFlag(I2C_IFG_RX);
     I2C_setStop();
+    return -1;
 }
 
 /**
@@ -221,7 +242,7 @@ static inline int8_t I2C_nextByte_ISR_read()
  * or store the byte from the receive address to the buffer)
  * returns 1 in case another byte is available for reading / writing
  * also handles repeated start, stop, NACK/ACK actions
- */
+
 static inline int8_t I2C_nextByte() __attribute__((always_inline));
 static inline int8_t I2C_nextByte()
 {
@@ -269,7 +290,7 @@ static inline int8_t I2C_nextByte()
     }
     return 1;
 }
-
+*/
 /**
  * activates a specific I2C_Data structure
  * @param data: the data to be activated, in other words which bytes
