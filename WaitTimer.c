@@ -10,16 +10,20 @@
 
 #ifdef MAXTIMERS
 
+#ifdef WAITTIMER_TASK
 Task* task_waitScheduler = 0;
+#endif /* WAITTIMER_TASK */
 
 void waitScheduler();
 
 void Timer_initOperation()
 {
+#ifdef WAITTIMER_TASK
     task_waitScheduler = addTask(0, waitScheduler);
+#endif /* WAITTIMER_TASK */
 }
 
-static inline uint16_t Timer_getExponentAndTime(uint16_t time) __attribute__((always_inline));;
+static inline uint16_t Timer_getExponentAndTime(uint16_t time) __attribute__((always_inline));
 static inline uint16_t Timer_getExponentAndTime(uint16_t time) {
     uint16_t timeCpy = time;
     uint16_t exponent = 0;
@@ -47,7 +51,7 @@ WaitTimer* initWaitTimer(uint16_t waitTime)
 	return &waitTimers_mem[timers_size-1];
 }
 
-static inline void stopTimer(WaitTimer* waitTimer) __attribute__((always_inline));;
+static inline void stopTimer(WaitTimer* waitTimer) __attribute__((always_inline));
 static inline void stopTimer(WaitTimer* waitTimer) {
     if (waitTimer->taskOnStop != -1) {
         scheduleTask(&task_mem[waitTimer->taskOnStop]);

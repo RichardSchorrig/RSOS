@@ -16,6 +16,10 @@
  * 		if status is inactive
  * 		changed function stopTimer(): deactivates timer before activating again to comply
  * 		with changes to setTimer()
+ * 2017 05 04
+ *      added flag WAITTIMER_TASK to identify that the waitScheduler is called from the task
+ *      scheduler. if WAITTIMER_TASK is not defined, the waitScheduler is run directly in
+ *      the timer ISR
  */
 
 #ifndef WAITTIMER_H_
@@ -105,11 +109,22 @@ extern Task* task_waitScheduler;
  * waitScheduler. The waitScheduler is responsible for
  * counting down the wait time and scheduling the tasks
  *
- * To operate, a free task structure is needed
+ * if WAITTIMER_TASK is defined,
+ * to operate, a free task structure is needed
  * 1x Task
  * consider the structures in your RSOSDefines
+ * the task is scheduled on every timer ISR and run when possible
+ *
+ * if WAITTIMER_TASK is not defined,
+ * the waitScheduler is run directly in the timer ISR.
  */
 void Timer_initOperation();
+
+/**
+ * the waitTimer waitScheduler.
+ * checks all active WaitTimer, decrements their waitTime, runs the tasks if they stop
+ */
+void waitScheduler();
 
 /**
  * to be called in a timer interrupt routine.
@@ -118,7 +133,11 @@ void Timer_initOperation();
 static inline void Timer_ISR() __attribute__((always_inline));
 static inline void Timer_ISR()
 {
+#ifdef WAITTIMER_TASK
     scheduleTask(task_waitScheduler);
+#else
+    waitScheduler();
+#endif /* WAITTIMER_TASK */
 }
 
 /**
@@ -201,8 +220,6 @@ static inline void continueTimer(WaitTimer* waitTimer)
 {
     waitTimer->status |= WaitTimer_isActive;
 }
-
-void waitScheduler();
 
 #endif /* MAXTIMERS */
 #endif /* WAITTIMER_H_ */
