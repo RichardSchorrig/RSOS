@@ -37,7 +37,7 @@
  * when bytesToRead is 0, a NACK and stop condition is transferred.
  */
 typedef struct I2C_Data_t {
-    uint8_t buffer;
+    int8_t buffer;
     uint8_t bytesToWrite;
     uint8_t bytesToRead;
     uint8_t slaveAddress;
