@@ -53,6 +53,13 @@ extern int8_t dotMatrix_size;
 extern DisplayElement dotMatrix_mem[DOTMATRIX_MEMSIZE];
 
 /**
+ * User can add commands to the buffer and force the output
+ * by calling
+ * DotMatrix_forceCommandOutput()
+ */
+extern uint8_t g_dotMatrix_displayCommandBuffer[10];
+
+/**
  * resets the display, initializes the dot matrix display function
  * (must be called prior any other dot matrix function call)
  * to operate, the following structures must be available:
@@ -103,7 +110,16 @@ int8_t DotMatrix_CleanDisplay();
  */
 int16_t DotMatrix_cleanElement(DisplayElement* delm);
 
-int8_t DotMatrix_scroll(uint8_t line);
+//int8_t DotMatrix_scroll(uint8_t line);
+
+/**
+ * can be used to write the bytes from the command buffer to the display element
+ * prior to calling, the g_dotMatrix_displayCommandBuffer should be filled with
+ * the bytes to be transferred.
+ * @param nOfBytes: the number of bytes to be transferred from the command buffer
+ * @return 1 if successful
+ */
+int8_t DotMatrix_forceCommandOutput(uint8_t nOfBytes);
 
 /**
  * changes display data according to data till the end of the element or datalen is reached

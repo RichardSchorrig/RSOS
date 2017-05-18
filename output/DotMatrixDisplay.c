@@ -10,21 +10,27 @@
 /* exclude everything if not used */
 #ifdef DOTMATRIX_MEMSIZE
 
-#include "../SerialInterface/SPIOperation.h"
 #include <DisplayHardware.h>
 
+#ifdef DOTMATRIX_SPI
+#include "../SerialInterface/SPIOperation.h"
 SPIOperation* dotMatrixSR;
+#else
+#ifdef DOTMATRIX_I2C
+#include "../SerialInterface/I2C_Operation.h"
+I2C_Operation* dotMatrixSR;
+#endif /* SPI / I2C */
 
-static const uint16_t dotMatrix_activeBit = 0x8000;
-static const uint16_t dotMatrix_isInverted = 0x4000;
-static const uint16_t dotMatrix_lineMask = 0x00F0;
-static const uint16_t dotMatrix_additionalLineMask = 0x000F;
+#define dotMatrix_activeBit 0x8000
+#define dotMatrix_isInverted 0x4000
+#define dotMatrix_lineMask 0x00F0
+#define dotMatrix_additionalLineMask 0x000F
 
 /**
  * buffers
  */
 uint8_t dotMatrix_displayBuffer[DOTMATRIX_DISPLAY_LINES][DOTMATRIX_DISPLAY_XRES];
-uint8_t dotMatrix_displayCommandBuffer[10];
+uint8_t g_dotMatrix_displayCommandBuffer[10];
 
 static BufferBuffer_uint8 * dotMatrix_dataBufferBuffer;
 static Buffer_uint8 * dotMatrix_command_and_data_Buffer[2];
@@ -36,7 +42,7 @@ static Task * dotMatrix_task_transferElement = 0;
 void DotMatrix_initDisplay(volatile uint8_t * port, uint8_t pin)
 {
 
-    dotMatrix_command_and_data_Buffer[0] = (Buffer_uint8*) initBuffer((void*)dotMatrix_displayCommandBuffer, 10, BUFFER_TYPE_REGULAR);
+    dotMatrix_command_and_data_Buffer[0] = (Buffer_uint8*) initBuffer((void*)g_dotMatrix_displayCommandBuffer, 10, BUFFER_TYPE_REGULAR);
     dotMatrix_command_and_data_Buffer[1] = (Buffer_uint8*) initBuffer((void*)&dotMatrix_displayBuffer[0][0], DOTMATRIX_DISPLAY_XRES, BUFFER_TYPE_REGULAR);
     dotMatrix_dataBufferBuffer = (BufferBuffer_uint8*) initBuffer((void*) dotMatrix_command_and_data_Buffer, 2, BUFFER_TYPE_BUFFERBUFFER);
 	dotMatrixSR = SPI_initSPIOperation(pin, port, (Buffer_void*)dotMatrix_dataBufferBuffer, STROBE_ON_TRANSFER | STROBE_POLARITY_LOW);
@@ -44,19 +50,12 @@ void DotMatrix_initDisplay(volatile uint8_t * port, uint8_t pin)
 	dotMatrix_task_transferElement = addTask(1, DotMatrix_transferElement);
 	setTaskCyclic(dotMatrix_task_transferElement, 2);
 
-	dotMatrix_displayCommandBuffer[0] = COMMAND_START | COMMAND_START_CS1 | COMMAND_START_CS2 | COMMAND_START_A0;
-	dotMatrix_displayCommandBuffer[1] = 6;
-	dotMatrix_displayCommandBuffer[2] = COMMAND_RESET;
-	dotMatrix_displayCommandBuffer[3] = COMMAND_DISPLAYDRIVER_ON;
-	dotMatrix_displayCommandBuffer[4] = COMMAND_STATICDRIVE_OFF;
-	dotMatrix_displayCommandBuffer[5] = COMMAND_SETLINE;
-	dotMatrix_displayCommandBuffer[6] = COMMAND_SETPAGE;
-	dotMatrix_displayCommandBuffer[7] = 0;
+	int8_t bytes = initializeDisplayHardware(g_dotMatrix_displayCommandBuffer, 10, 0);
 
-	setBufferLength((Buffer_void*) dotMatrix_command_and_data_Buffer[0], 8);
+	setBufferLength((Buffer_void*) dotMatrix_command_and_data_Buffer[0], bytes);
 	setBufferLength((Buffer_void*) dotMatrix_command_and_data_Buffer[1], 0);
 
-	SPI_activateSPIOperation(dotMatrixSR, 8);   //todo: check return value, might not be activated
+	SPI_activateSPIOperation(dotMatrixSR, bytes);   //todo: check return value, might not be activated
 }
 
 /*
@@ -71,9 +70,14 @@ inline DisplayElement* getIfActive(uint8_t lineToMatch, uint8_t index) {
 }
 */
 
-static DisplayElement* currentDisplayElement = 0;
+/**
+ * Forces the command buffer to be outputted
+ */
+static uint8_t DotMatrix_forceOutput = 0;
 
-void DotMatrix_transferElement() {
+void DotMatrix_transferElement()
+{
+    static DisplayElement* currentDisplayElement = 0;
     static int8_t noSROperation = 0;
     static int8_t currentLine = -1;
     static int8_t totalLines = -1;
@@ -93,7 +97,14 @@ void DotMatrix_transferElement() {
                     totalLines = (currentDisplayElement->status & dotMatrix_additionalLineMask) + 1;
                     currentLine = ((currentDisplayElement->status & dotMatrix_lineMask) >> 4);
 
-
+#ifndef DISPLAY_PositioningOnEachNewLine
+                    bufferlength = setCommandPosition(currentLine, currentDisplayElement->pos_x, g_dotMatrix_displayCommandBuffer, 0, 10);
+                    setBufferLength((Buffer_void*) dotMatrix_command_and_data_Buffer[0], bufferlength);
+                    resetBuffer((Buffer_void*)dotMatrix_dataBufferBuffer);
+                    noSROperation = SPI_activateSPIOperation(dotMatrixSR, bufferlength);
+                    task_mem[currentRunningTask].currentCycle = 2;
+                    return;
+#endif /* DISPLAY_PositioningOnEachNewLine */
                     break;
                 }
 
@@ -119,8 +130,11 @@ void DotMatrix_transferElement() {
             if (dotMatrixSR->bytesToWrite == 0)
             {
                 bufferlength = 0;
-                bufferlength += setCommandPosition(currentLine, currentDisplayElement->pos_x, dotMatrix_displayCommandBuffer, 0, 10);
-                bufferlength += setCommandData(currentDisplayElement->len_x, currentDisplayElement->pos_x, dotMatrix_displayCommandBuffer, bufferlength, 10);
+#ifdef DISPLAY_PositioningOnEachNewLine
+                bufferlength += setCommandPosition(currentLine, currentDisplayElement->pos_x, g_dotMatrix_displayCommandBuffer, 0, 10);
+#endif /* DISPLAY_PositioningOnEachNewLine */
+                bufferlength += setCommandData(currentDisplayElement->len_x, currentDisplayElement->pos_x, g_dotMatrix_displayCommandBuffer, bufferlength, 10);
+
                 setBufferLength((Buffer_void*) dotMatrix_command_and_data_Buffer[0], bufferlength);
                 setBuffer((Buffer_void*) dotMatrix_command_and_data_Buffer[1],
                           (void*) &dotMatrix_displayBuffer[currentLine][currentDisplayElement->pos_x],
@@ -172,6 +186,12 @@ DisplayElement* DotMatrix_newDisplayElement(uint8_t xpos, uint8_t ypos, uint8_t 
 	}
 	dotMatrix_size += 1;
 	return &dotMatrix_mem[dotMatrix_size - 1];
+}
+
+int8_t DotMatrix_forceCommandOutput(uint8_t nOfBytes)
+{
+    if (dotMatrixSR)
+
 }
 
 inline int8_t DotMatrix_changeElement_inLine(DisplayElement* delm,
@@ -283,9 +303,9 @@ int8_t DotMatrix_scroll(uint8_t line) {
     if (line > 31)
         return -1;
 
-    dotMatrix_displayCommandBuffer[0] = COMMAND_START | COMMAND_START_CS1 | COMMAND_START_CS2 | COMMAND_START_A0;
-    dotMatrix_displayCommandBuffer[1] = 1;
-    dotMatrix_displayCommandBuffer[2] = COMMAND_SETLINE + line;
+    g_dotMatrix_displayCommandBuffer[0] = COMMAND_START | COMMAND_START_CS1 | COMMAND_START_CS2 | COMMAND_START_A0;
+    g_dotMatrix_displayCommandBuffer[1] = 1;
+    g_dotMatrix_displayCommandBuffer[2] = COMMAND_SETLINE + line;
 
     setBufferLength((Buffer_void*) dotMatrix_command_and_data_Buffer[0], 3);
     setBufferLength((Buffer_void*) dotMatrix_command_and_data_Buffer[1], 0);
