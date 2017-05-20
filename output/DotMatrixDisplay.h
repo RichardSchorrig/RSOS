@@ -113,9 +113,17 @@ int16_t DotMatrix_cleanElement(DisplayElement* delm);
 //int8_t DotMatrix_scroll(uint8_t line);
 
 /**
+ * checks if any element is currently transferred
+ * @return 0: no element is transferred
+ *         any positive number: the number of bytes left to be transferred
+ */
+uint8_t DotMatrix_isActive();
+
+/**
  * can be used to write the bytes from the command buffer to the display element
  * prior to calling, the g_dotMatrix_displayCommandBuffer should be filled with
- * the bytes to be transferred.
+ * the bytes to be transferred. Before filling the buffer, call DotMatrix_isActive()
+ * to check if the buffer is currently in use.
  * @param nOfBytes: the number of bytes to be transferred from the command buffer
  * @return 1 if successful
  */

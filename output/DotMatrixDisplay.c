@@ -74,6 +74,7 @@ inline DisplayElement* getIfActive(uint8_t lineToMatch, uint8_t index) {
  * Forces the command buffer to be outputted
  */
 static uint8_t DotMatrix_forceOutput = 0;
+static uint8_t DotMatrix_bufferlength = 0;
 
 void DotMatrix_transferElement()
 {
@@ -82,26 +83,26 @@ void DotMatrix_transferElement()
     static int8_t currentLine = -1;
     static int8_t totalLines = -1;
 //    static int8_t setPosition = 0;
-    static uint8_t bufferlength = 0;
+
     int8_t noDelms = 0;
 
-    if (noSROperation != -1) {
+    if (noSROperation != -1 || DotMatrix_forceOutput) {
         if (currentDisplayElement == 0) {
             int8_t i = dotMatrix_size;
             for (; i>0; i-=1) {
 
                 if (dotMatrix_mem[i-1].status & dotMatrix_activeBit) {
                     currentDisplayElement = &dotMatrix_mem[i-1];
-                    bufferlength = 0;
+                    DotMatrix_bufferlength = 0;
 
                     totalLines = (currentDisplayElement->status & dotMatrix_additionalLineMask) + 1;
                     currentLine = ((currentDisplayElement->status & dotMatrix_lineMask) >> 4);
 
 #ifndef DISPLAY_PositioningOnEachNewLine
-                    bufferlength = setCommandPosition(currentLine, currentDisplayElement->pos_x, g_dotMatrix_displayCommandBuffer, 0, 10);
-                    setBufferLength((Buffer_void*) dotMatrix_command_and_data_Buffer[0], bufferlength);
+                    DotMatrix_bufferlength = setCommandPosition(currentLine, currentDisplayElement->pos_x, g_dotMatrix_displayCommandBuffer, 0, 10);
+                    setBufferLength((Buffer_void*) dotMatrix_command_and_data_Buffer[0], DotMatrix_bufferlength);
                     resetBuffer((Buffer_void*)dotMatrix_dataBufferBuffer);
-                    noSROperation = SPI_activateSPIOperation(dotMatrixSR, bufferlength);
+                    noSROperation = SPI_activateSPIOperation(dotMatrixSR, DotMatrix_bufferlength);
                     task_mem[currentRunningTask].currentCycle = 2;
                     return;
 #endif /* DISPLAY_PositioningOnEachNewLine */
@@ -124,23 +125,20 @@ void DotMatrix_transferElement()
 
         if (currentDisplayElement != 0) {
 
-//            if ((dotMatrix_command_and_data_Buffer[0]->size.readBytes == dotMatrix_command_and_data_Buffer[0]->size.size) &&
-//                (dotMatrix_command_and_data_Buffer[1]->size.readBytes == dotMatrix_command_and_data_Buffer[1]->size.size))
-
             if (dotMatrixSR->bytesToWrite == 0)
             {
-                bufferlength = 0;
+                DotMatrix_bufferlength = 0;
 #ifdef DISPLAY_PositioningOnEachNewLine
-                bufferlength += setCommandPosition(currentLine, currentDisplayElement->pos_x, g_dotMatrix_displayCommandBuffer, 0, 10);
+                DotMatrix_bufferlength += setCommandPosition(currentLine, currentDisplayElement->pos_x, g_dotMatrix_displayCommandBuffer, 0, 10);
 #endif /* DISPLAY_PositioningOnEachNewLine */
-                bufferlength += setCommandData(currentDisplayElement->len_x, currentDisplayElement->pos_x, g_dotMatrix_displayCommandBuffer, bufferlength, 10);
+                DotMatrix_bufferlength += setCommandData(currentDisplayElement->len_x, currentDisplayElement->pos_x, g_dotMatrix_displayCommandBuffer, DotMatrix_bufferlength, 10);
 
-                setBufferLength((Buffer_void*) dotMatrix_command_and_data_Buffer[0], bufferlength);
+                setBufferLength((Buffer_void*) dotMatrix_command_and_data_Buffer[0], DotMatrix_bufferlength);
                 setBuffer((Buffer_void*) dotMatrix_command_and_data_Buffer[1],
                           (void*) &dotMatrix_displayBuffer[currentLine][currentDisplayElement->pos_x],
                           currentDisplayElement->len_x);
                 resetBuffer((Buffer_void*)dotMatrix_dataBufferBuffer);
-                bufferlength += currentDisplayElement->len_x;
+                DotMatrix_bufferlength += currentDisplayElement->len_x;
                 currentLine += 1;
                 totalLines -= 1;
 
@@ -151,7 +149,14 @@ void DotMatrix_transferElement()
                     totalLines = -1;
                 }
 
-                noSROperation = SPI_activateSPIOperation(dotMatrixSR, bufferlength);
+#ifdef DOTMATRIX_SPI
+                noSROperation = SPI_activateSPIOperation(dotMatrixSR, DotMatrix_bufferlength);
+#else
+#ifdef DOTMATRIX_I2C
+                noSROperation = I2C_activateData(dotMatrixSR, DotMatrix_bufferlength, 0);
+#endif /* SPI / I2C */
+
+
             }
 
             task_mem[currentRunningTask].currentCycle = 2;
@@ -161,7 +166,7 @@ void DotMatrix_transferElement()
     {
         // add some cycle (it doesn't matter how many cycles since it is repeated and checked each time
         task_mem[currentRunningTask].currentCycle = 2;
-        noSROperation = SPI_activateSPIOperation(dotMatrixSR, bufferlength);
+        noSROperation = SPI_activateSPIOperation(dotMatrixSR, DotMatrix_bufferlength);
     }
 }
 
@@ -188,10 +193,18 @@ DisplayElement* DotMatrix_newDisplayElement(uint8_t xpos, uint8_t ypos, uint8_t 
 	return &dotMatrix_mem[dotMatrix_size - 1];
 }
 
+uint8_t DotMatrix_isActive()
+{
+    return dotMatrixSR->bytesToWrite;
+}
+
 int8_t DotMatrix_forceCommandOutput(uint8_t nOfBytes)
 {
-    if (dotMatrixSR)
+    if (DotMatrix_isActive())
+        return -1;
 
+    DotMatrix_bufferlength = nOfBytes;
+    DotMatrix_forceOutput = 1;
 }
 
 inline int8_t DotMatrix_changeElement_inLine(DisplayElement* delm,
