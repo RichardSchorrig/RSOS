@@ -28,7 +28,6 @@
 /* exclude everything if not used */
 #ifdef MAXSHIFTREGISTER
 
-#include <msp430.h>
 #include <stdint.h>
 #include "../Task.h"
 #include "../buffer/BasicBuffer_int8.h"
