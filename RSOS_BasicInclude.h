@@ -17,6 +17,15 @@
 #include <stdint.h>
 
 /**
+ * define for C++
+ */
+#ifdef __cplusplus
+#define __EXTERN_C extern "C"
+#else
+#define __EXTERN_C
+#endif /* __cplusplus */
+
+/**
  * boolean define for bool like variables
  */
 typedef uint8_t RSOS_bool;
