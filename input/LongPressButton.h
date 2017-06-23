@@ -89,6 +89,7 @@ extern int8_t longPressButton_size;
  * the functionality of the clockMultiply value is similar to the one in
  * initButtonOperation(), but a higher multiplier is recommended
  */
+__EXTERN_C
 void initLongPressButtonOperation(uint16_t clockMultiply);
 
 /**
@@ -109,6 +110,7 @@ void initLongPressButtonOperation(uint16_t clockMultiply);
  * @param waitTime: the time that passes until the interrupt is enabled after interrupt occurs
  * @return: a reference to the new button
  */
+__EXTERN_C
 LongPressButton* initLPButton(uint8_t bit, volatile uint8_t * portRegister, uint8_t waitTime);
 
 /**
@@ -116,6 +118,7 @@ LongPressButton* initLPButton(uint8_t bit, volatile uint8_t * portRegister, uint
  * @param lpbutton the button to add the task to
  * @param task the task to add
  */
+__EXTERN_C
 void addShortPressTask_toLPButton(LongPressButton* lpbutton, Task* task);
 
 /**
@@ -126,6 +129,7 @@ void addShortPressTask_toLPButton(LongPressButton* lpbutton, Task* task);
  * @param task the task to add
  * @param isRepetitive: whether or not the task is repeatedly scheduled (1: repetitive, 0: once)
  */
+__EXTERN_C
 void addLongPressTask_toLPButton(LongPressButton* lpbutton, Task* task, int8_t isRepetitive);
 
 /**
@@ -139,12 +143,14 @@ void addLongPressTask_toLPButton(LongPressButton* lpbutton, Task* task, int8_t i
  *        is scheduled. When the number of cycles match the set cycles, the wait time is reduced (divided by 2)
  *        allowed values are: 0..15
  */
+__EXTERN_C
 void setLongPressButton_decrementWaitTime(LongPressButton* lpbutton, uint8_t cycles);
 
 /**
  * the task function called on press for all Buttons that are LongPressButtons
  * disables the active bit in Button, enables the active bit in LongPressButton
  */
+__EXTERN_C
 void longPressButton_Enable();
 
 /**
@@ -153,6 +159,7 @@ void longPressButton_Enable();
  * checks if button is still pressed, on release, reactivates button to be taken care of by the buttonScheduler
  * (which enables the button interrupt again when released)
  */
+__EXTERN_C
 void longPressButtonWaitScheduler();
 
 #endif /* MAXLONGPRESSBUTTONS */

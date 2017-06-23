@@ -123,6 +123,7 @@ extern Button buttons_mem[MAXBUTTONS];
  * it is possible to add a multiplier to all button debounce times
  * this is done by the wait timer which controls the button wait scheduler
  */
+__EXTERN_C
 void initButtonOperation(uint16_t clockMultiply);
 
 /**
@@ -141,6 +142,7 @@ void initButtonOperation(uint16_t clockMultiply);
  * @return: a reference to the new button
  */
 //Button* initButton(unsigned char bit, unsigned char port, unsigned char waitTime);
+__EXTERN_C
 Button* initButton(unsigned char bit, volatile unsigned char * port, uint8_t waitTime);
 
 /**
@@ -152,6 +154,7 @@ Button* initButton(unsigned char bit, volatile unsigned char * port, uint8_t wai
  * @param button: the button to set the task to
  * @param task: the task to schedule
  */
+__EXTERN_C
 void addTaskOnPressToButton(Button* button, Task* task);
 
 /**
@@ -163,6 +166,7 @@ void addTaskOnPressToButton(Button* button, Task* task);
  * @param button: the button to set the task to
  * @param task: the task to schedule
  */
+__EXTERN_C
 void addTaskOnReleaseToButton(Button* button, Task* task);
 
 /**
@@ -221,6 +225,7 @@ static inline void buttonPressed(Button* button) {
  * the button wait scheduler
  * checks all buttons and takes care of the interrupt enable registers
  */
+__EXTERN_C
 void buttonWaitScheduler();
 
 //inline void enableBtnInterrupt(Button* btn);
