@@ -30,7 +30,7 @@
 
 #include <stdint.h>
 
-//#include <msp430.h>
+#include "RSOS_BasicInclude.h"
 
 /**
  * bit identifier: active
@@ -157,6 +157,7 @@ extern uint8_t numberOfRunningTasks;
  * @param TaskFunction* taskfunction: a pointer to a function, which should be executed when task is active
  * @return: a reference to the added task
  */
+__EXTERN_C
 Task* addTask(unsigned char priority, TaskFunction* taskfunction);
 
 /**
@@ -169,6 +170,7 @@ Task* addTask(unsigned char priority, TaskFunction* taskfunction);
  *        pointer than the prior pointer has no effect.
  * @param followUpTask: the position of the following task in the tasks-array
  */
+__EXTERN_C
 void addFollowUpTask(Task* task, Task* *followUpArray, Task* followUpTask);
 
 /**
@@ -176,6 +178,7 @@ void addFollowUpTask(Task* task, Task* *followUpArray, Task* followUpTask);
  * @param task: the position of the task in the tasks-array
  * @param cycles: the number of cycles to be executed (2 to 16 cycles)
  */
+__EXTERN_C
 void setTaskCyclic(Task* task, char cycles);
 
 /**
@@ -183,6 +186,7 @@ void setTaskCyclic(Task* task, char cycles);
  * @param task: the position of the task in the tasks-array
  * @param delay: the number of cycles the scheduler waits (1 to 15 delay cycles)
  */
+__EXTERN_C
 void setTaskDelay(Task* task, char delay);
 
 /**
@@ -240,11 +244,13 @@ static inline void scheduleTask(Task* task)
 /**
  * sets the scheduler enabled, the scheduler is running continously
  */
+__EXTERN_C
 void enableScheduler();
 
 /**
  * stops the scheduler, the scheduler will finish the remaining active tasks
  */
+__EXTERN_C
 void disableScheduler();
 
 /**
@@ -253,6 +259,7 @@ void disableScheduler();
  * After the tasks-array is completely went through, the scheduler goes to sleep in LPM0 with interrupts.
  * it is woken by the timerA0-interrupt, which must be enabled prior call!
  */
+__EXTERN_C
 void scheduler();
 
 
