@@ -10,6 +10,8 @@
 
 #include <RSOSDefines.h>
 
+#include "../RSOS_BasicInclude.h"
+
 /* exclude everything if not used */
 #ifdef MAXBUFFER_VOID
 
