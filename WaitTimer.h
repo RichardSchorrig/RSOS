@@ -30,6 +30,8 @@
 
 #include <stdint.h>
 
+#include "RSOS_BasicInclude.h"
+
 #ifdef MAXTIMERS
 
 /**
@@ -101,7 +103,10 @@ typedef struct WaitTimer_t{
 
 extern int8_t timers_size;
 extern WaitTimer waitTimers_mem[MAXTIMERS];
+
+#ifdef WAITTIMER_TASK
 extern Task* task_waitScheduler;
+#endif /* WAITTIMER_TASK */
 
 /**
  * initialize the wait timer operation.
@@ -118,12 +123,14 @@ extern Task* task_waitScheduler;
  * if WAITTIMER_TASK is not defined,
  * the waitScheduler is run directly in the timer ISR.
  */
+__EXTERN_C
 void Timer_initOperation();
 
 /**
  * the waitTimer waitScheduler.
  * checks all active WaitTimer, decrements their waitTime, runs the tasks if they stop
  */
+__EXTERN_C
 void waitScheduler();
 
 /**
@@ -145,6 +152,7 @@ static inline void Timer_ISR()
  * @param waitTime: the time to wait; 0..250 Ticks (250 Ticks = 5 sec)
  * @return a reference to the new WaitTimer
  */
+__EXTERN_C
 WaitTimer* initWaitTimer(uint16_t waitTime);
 
 /**
@@ -153,6 +161,7 @@ WaitTimer* initWaitTimer(uint16_t waitTime);
  * @param waitTimer: the WaitTimer to add the task to
  * @param task: the task to add
  */
+__EXTERN_C
 void setTaskOnStart(WaitTimer* waitTimer, Task* task);
 
 /**
@@ -161,6 +170,7 @@ void setTaskOnStart(WaitTimer* waitTimer, Task* task);
  * @param waitTimer: the WaitTimer to add the task to
  * @param task: the task to add
  */
+__EXTERN_C
 void setTaskOnStop(WaitTimer* waitTimer, Task* task);
 
 /**
@@ -169,12 +179,14 @@ void setTaskOnStop(WaitTimer* waitTimer, Task* task);
  * @param waitTimer: the wait timer to set
  * @param waitTime: the new wait time
  */
+__EXTERN_C
 void setNewWaitTime(uint16_t waitTime, WaitTimer* waitTimer);
 
 /**
  * sets the specified timer to be started again after it reaches zero
  * @param waitTimer: the timer to set cyclic
  */
+__EXTERN_C
 void setTimerCyclic(WaitTimer* waitTimer);
 
 /**
