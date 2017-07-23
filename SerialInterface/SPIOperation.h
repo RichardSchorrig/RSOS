@@ -28,7 +28,6 @@
 /* exclude everything if not used */
 #ifdef MAXSHIFTREGISTER
 
-#include <msp430.h>
 #include <stdint.h>
 #include "../Task.h"
 #include "../buffer/BasicBuffer_int8.h"
@@ -159,6 +158,7 @@ static inline void SPI_initReadAddress(volatile unsigned char * address)
  * @param writeAddress: the address bytes are written into the interface
  * @param readAddress: the address to read from the interface
  */
+__EXTERN_C
 void SPI_initOperation(volatile unsigned char * writeAddress, volatile unsigned char * readAddress);
 
 /**
@@ -181,6 +181,7 @@ void SPI_initOperation(volatile unsigned char * writeAddress, volatile unsigned 
  *      - Write enable
  * @return: the initialized structure pointer
  */
+__EXTERN_C
 SPIOperation* SPI_initSPIOperation(uint8_t strobePin, volatile uint8_t * strobePort, Buffer_void* buffer, uint8_t operationMode);
 
 /**

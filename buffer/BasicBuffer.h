@@ -10,6 +10,8 @@
 
 #include <RSOSDefines.h>
 
+#include "../RSOS_BasicInclude.h"
+
 /* exclude everything if not used */
 #ifdef MAXBUFFER_VOID
 
@@ -99,6 +101,7 @@ extern int8_t buffer_size;
  *
  * @return the initialized buffer
  */
+__EXTERN_C
 Buffer_void* initBuffer(void* data, uint8_t length, uint8_t type);
 
 /**
@@ -106,6 +109,7 @@ Buffer_void* initBuffer(void* data, uint8_t length, uint8_t type);
  * @param buffer the buffer to set the new memory to
  * @param length the maximum number of elements to store
  */
+__EXTERN_C
 void setBuffer(Buffer_void* buffer, void* data, uint8_t length);
 
 /**
@@ -114,6 +118,7 @@ void setBuffer(Buffer_void* buffer, void* data, uint8_t length);
  * @param buffer the buffer to set the new length to
  * @param length the new length which should be smaller than the allocated memory
  */
+__EXTERN_C
 void setBufferLength(Buffer_void* buffer, uint8_t length);
 
 
@@ -121,6 +126,7 @@ void setBufferLength(Buffer_void* buffer, uint8_t length);
  * resets the buffer's position to 0
  * @param buffer the buffer to reset
  */
+__EXTERN_C
 void resetBuffer(Buffer_void* buffer);
 
 /**
@@ -128,6 +134,7 @@ void resetBuffer(Buffer_void* buffer);
  * @param buffer the buffer
  * @return the position of the buffer, -1 in case an invalid pointer was given
  */
+__EXTERN_C
 int8_t BasicBuffer_getNumber(Buffer_void* buffer);
 
 #endif /* MAXBUFFER_VOID */

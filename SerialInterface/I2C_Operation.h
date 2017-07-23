@@ -103,6 +103,7 @@ static inline void I2C_initControlAddress(volatile unsigned char * address)
  * @param readAddress: the address to read from the interface
  * @param controlAddress: the control register address
  */
+__EXTERN_C
 void I2C_initOperation(volatile unsigned char * writeAddress, volatile unsigned char * readAddress, volatile unsigned char * controlAddress);
 
 /**
@@ -110,6 +111,7 @@ void I2C_initOperation(volatile unsigned char * writeAddress, volatile unsigned 
  * @param buffer the buffer to use
  * @param slaveAddress the 7 digit right-justified address of the slave device
  */
+__EXTERN_C
 I2C_Data* I2C_initData(Buffer_void* buffer, uint8_t slaveAddress);
 
 /**
