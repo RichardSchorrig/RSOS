@@ -172,12 +172,12 @@ void scheduler()
 				}
 				else 					//if the delay is zero
 				{
-					task->task();
-
 					if (task->status & hasWaitTime)
 					{
 						resetDelay(task);
 					}
+
+					task->task();
 
 					if (task->status & isCycleTask)
 					{
