@@ -12,8 +12,6 @@
 
 #ifdef I2CDATASIZE
 
-#include <msp430.h>
-
 #include "../buffer/BasicBuffer_int8.h"
 #include <stdint.h>
 
@@ -312,15 +310,11 @@ static inline int8_t I2C_activateData(I2C_Data* data, uint8_t bytesToWrite, uint
     }
     else
     {
-        if (UCB1STAT & UCBBUSY)
+        if (I2C_isBusy())
         {
-//            uint8_t b = *i2c_readAddress;
-            UCB1CTL1 |= UCTXSTP;
-//            while (UCB1CTL1 & UCTXSTP)
-            {
-                ;
-            }
+        	I2C_setStop();
         }
+
         activeI2CTransmission = data - i2c_data_mem;
         data->bytesToRead = bytesToRead;
         data->bytesToWrite = bytesToWrite;
@@ -331,14 +325,14 @@ static inline int8_t I2C_activateData(I2C_Data* data, uint8_t bytesToWrite, uint
 
         if (bytesToWrite != 0)
         {
-            *i2c_controlAddress |= UCTR;
+        	I2C_setTransmit();
         }
         else
         {
-            *i2c_controlAddress &= ~UCTR;
+            I2C_setReceive();
         }
 
-        *i2c_controlAddress |= UCTXSTT;
+        I2C_setStart();
 
         return activeI2CTransmission;
     }
