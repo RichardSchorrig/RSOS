@@ -37,7 +37,7 @@
  * when bytesToRead is 0, a NACK and stop condition is transferred.
  */
 typedef struct I2C_Data_t {
-    uint8_t buffer;
+    int8_t buffer;
     uint8_t bytesToWrite;
     uint8_t bytesToRead;
     uint8_t slaveAddress;
@@ -189,7 +189,7 @@ static inline int8_t I2C_nextByte_ISR_write()
             return 0;
         }
     }
-    I2C_unsetInterruptFlag(I2C_IFG_TX);
+//    I2C_unsetInterruptFlag(I2C_IFG_TX);
     I2C_setStop();
     return -1;
 }
@@ -233,7 +233,7 @@ static inline int8_t I2C_nextByte_ISR_read()
         }
     }
     g_I2C_dummyReadByte = I2C_READADDRESS;
-    I2C_unsetInterruptFlag(I2C_IFG_RX);
+//    I2C_unsetInterruptFlag(I2C_IFG_RX);
     I2C_setStop();
     return -1;
 }
