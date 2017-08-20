@@ -125,9 +125,9 @@ struct Task_t;
  */
 typedef struct Task_t {
 	TaskFunction* task;
-	volatile unsigned int status;
-	volatile unsigned char currentDelay;
-	volatile unsigned char currentCycle;
+	volatile uint16_t status;
+	volatile uint8_t currentDelay;
+	volatile uint8_t currentCycle;
 	struct Task_t* *followUpTask;
 } Task;
 
@@ -190,6 +190,33 @@ __EXTERN_C
 void setTaskDelay(Task* task, char delay);
 
 /**
+ * set a new delay to the current running task,
+ * must only be called within the task function
+ *
+ * the delay is valid only once, after the delay has passed, the delay saved within the task is set again
+ * @param delay the new delay to set
+ */
+static inline void setTaskDelay_Once(uint8_t delay) __attribute__((always_inline));
+static inline void setTaskDelay_Once(uint8_t delay)
+{
+    task_mem[currentRunningTask].currentDelay = delay;
+}
+
+/**
+ * set a new cycle number to the current running task,
+ * must only be called within the task function
+ *
+ * the new number of cycles is valid until the task is unscheduled, after that the number of cycles is set to
+ * the number within the task
+ * @param cycle the new number of cycles
+ */
+static inline void setTaskCycle_Once(uint8_t cycle) __attribute__((always_inline));
+static inline void setTaskCycle_Once(uint8_t cycle)
+{
+    task_mem[currentRunningTask].currentCycle = cycle;
+}
+
+/**
  * @return: the number of the task in the task_mem array, -1 on error
  */
 static inline int8_t getTaskNumber(Task* task) __attribute__((always_inline));
@@ -242,7 +269,7 @@ static inline void scheduleTask(Task* task)
 }
 
 /**
- * sets the scheduler enabled, the scheduler is running continously
+ * sets the scheduler enabled, the scheduler is running continuously
  */
 __EXTERN_C
 void enableScheduler();
