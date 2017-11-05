@@ -190,27 +190,23 @@ __EXTERN_C
 void setTimerCyclic(WaitTimer* waitTimer);
 
 /**
+ * Returns the status of the wait timer.
+ * @param waitTimer: the timer to get the status
+ * @return true if the timer is currently running, false if it is stopped
+ */
+static inline RSOS_bool Timer_isActive(WaitTimer* waitTimer) __attribute__((always_inline));
+static inline RSOS_bool Timer_isActive(WaitTimer* waitTimer)
+{
+    return waitTimer->status & WaitTimer_isActive ? RSOS_bool_true : RSOS_bool_false;
+}
+
+/**
  * sets the specified timer active to count
  * will activate the task on start if the timer is not running
  * @param waitTimer: the timer to set active
  */
-static inline void setTimer(WaitTimer* waitTimer) __attribute__((always_inline));
-static inline void setTimer(WaitTimer* waitTimer)
-{
-	if (!(waitTimer->status & WaitTimer_isActive))
-	{
-		if (waitTimer->taskOnStart != -1)
-		{
-			scheduleTask(&task_mem[waitTimer->taskOnStart]);
-		}
-		switch (waitTimer->status & exponentMask) {
-		case WaitTimer_exponent_0: waitTimer->currentWaitTime = waitTimer->status & timer_waitTimeMask; break;
-		case WaitTimer_exponent_2: waitTimer->currentWaitTime = (waitTimer->status & timer_waitTimeMask) << 2; break;
-		case WaitTimer_exponent_4: waitTimer->currentWaitTime = (waitTimer->status & timer_waitTimeMask) << 4; break;
-		}
-		waitTimer->status |= WaitTimer_isActive;
-	}
-}
+__EXTERN_C
+void setTimer(WaitTimer* waitTimer);
 
 /**
  * stops the specified timer. the end task is not scheduled.

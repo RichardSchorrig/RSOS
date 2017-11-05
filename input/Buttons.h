@@ -173,7 +173,7 @@ void addTaskOnReleaseToButton(Button* button, Task* task);
  * disables the interrupt for the pin the button is connected to.
  * @param btn the button which interrupt should be disabled.
  */
-static inline void disableBtnInterrupt(Button* btn) __attribute__((always_inline));;
+static inline void disableBtnInterrupt(Button* btn) __attribute__((always_inline));
 static inline void disableBtnInterrupt(Button* btn)
 {
 	setPortInterrupt(btn->port, btn->bit, 0);
@@ -189,7 +189,7 @@ static inline void disableBtnInterrupt(Button* btn)
  * sets the button's wait time for debouncing
  * @param btn the button which wait time is set
  */
-static inline void Button_setWaitTime(Button* btn) __attribute__((always_inline));;
+static inline void Button_setWaitTime(Button* btn) __attribute__((always_inline));
 static inline void Button_setWaitTime(Button* btn) {
     uint8_t exponent;
     switch (btn->status & Button_exponentMask) {
@@ -208,7 +208,7 @@ static inline void Button_setWaitTime(Button* btn) {
  * else if a task is connected to the button release, it will be scheduled on release.
  * @param button the button being pressed
  */
-static inline void buttonPressed(Button* button) __attribute__((always_inline));;
+static inline void buttonPressed(Button* button) __attribute__((always_inline));
 static inline void buttonPressed(Button* button) {
     if (!(button->status & Button_isActive)) {
         disableBtnInterrupt(button);

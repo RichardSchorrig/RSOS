@@ -84,6 +84,23 @@ void setTimerCyclic(WaitTimer* waitTimer)
 	waitTimer->status |= WaitTimer_isCyclicTimer;
 }
 
+void setTimer(WaitTimer* waitTimer)
+{
+    if (!(waitTimer->status & WaitTimer_isActive))
+    {
+        if (waitTimer->taskOnStart != -1)
+        {
+            scheduleTask(&task_mem[waitTimer->taskOnStart]);
+        }
+        switch (waitTimer->status & exponentMask) {
+        case WaitTimer_exponent_0: waitTimer->currentWaitTime = waitTimer->status & timer_waitTimeMask; break;
+        case WaitTimer_exponent_2: waitTimer->currentWaitTime = (waitTimer->status & timer_waitTimeMask) << 2; break;
+        case WaitTimer_exponent_4: waitTimer->currentWaitTime = (waitTimer->status & timer_waitTimeMask) << 4; break;
+        }
+        waitTimer->status |= WaitTimer_isActive;
+    }
+}
+
 void waitScheduler()
 {
 	waitSchedulerEntered();
