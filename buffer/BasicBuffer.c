@@ -13,6 +13,7 @@
 Buffer_void buffer_mem[MAXBUFFER_VOID] = {0};
 int8_t buffer_size = 0;
 
+__EXTERN_C
 Buffer_void* initBuffer(void* data, uint8_t length, uint8_t type)
 {
     buffer_mem[buffer_size].buffer = data;
@@ -24,6 +25,7 @@ Buffer_void* initBuffer(void* data, uint8_t length, uint8_t type)
     return &buffer_mem[buffer_size - 1];
 }
 
+__EXTERN_C
 void setBuffer(Buffer_void* buffer, void* data, uint8_t length)
 {
     buffer->buffer = data;
@@ -31,12 +33,14 @@ void setBuffer(Buffer_void* buffer, void* data, uint8_t length)
     resetBuffer(buffer);
 }
 
+__EXTERN_C
 void setBufferLength(Buffer_void* buffer, uint8_t length)
 {
     buffer->data.size = length;
     resetBuffer(buffer);
 }
 
+__EXTERN_C
 void resetBuffer(Buffer_void* buffer)
 {
     buffer->index.index_pop = 0;
@@ -52,6 +56,7 @@ void resetBuffer(Buffer_void* buffer)
     }
 }
 
+__EXTERN_C
 int8_t BasicBuffer_getNumber(Buffer_void* buffer)
 {
     int8_t i;
