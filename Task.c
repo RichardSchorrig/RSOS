@@ -13,6 +13,10 @@
 
 static int8_t task_schedulerEnabled = 0;
 
+#ifdef TASK_WATCHDOG_ENABLE
+static uint8_t watchdogCounter = TASK_WATCHDOG_COUNTER;
+#endif /* TASK_WATCHDOG_ENABLE */
+
 Task* addTask(unsigned char priority, TaskFunction* taskfunction)
 {
 	task_mem[tasks_size].status = (priority & priorityMask);
@@ -59,6 +63,23 @@ void setTaskDelay(Task* task, char delay)
 {
 	task->status |= ((delay) << 4) & waitTimeMask;
 	task->currentDelay = delay;
+}
+
+#ifdef TASK_WATCHDOG_ENABLE
+static void taskfunction_resetWatchdog()
+{
+	watchdogCounter = TASK_WATCHDOG_COUNTER;
+	setTaskCycle_Once(2);
+}
+#endif /* TASK_WATCHDOG_COUNTER */
+
+void Task_initOperation()
+{
+#ifdef TASK_WATCHDOG_ENABLE
+	Task* resetSoftWatchdog = addTask(0, taskfunction_resetWatchdog);
+	setTaskCyclic(resetSoftWatchdog, 2);
+	scheduleTask(resetSoftWatchdog);
+#endif /* TASK_WATCHDOG_ENABLE */
 }
 
 void enableScheduler()
@@ -109,6 +130,21 @@ static inline void unscheduleTask(Task* task)
 #endif /* NEWSCHEDULER */
 }
 
+#ifdef TASK_WATCHDOG_ENABLE
+static inline void resetRSOSTasks() __attribute__((always_inline));
+static inline void resetRSOSTasks()
+{
+	int8_t i;
+	for (i=tasks_size-1; i>0; i-=1)	// skip task nr 0, this is the watchdog
+	{
+		task_mem[i].status &= ~Task_isActive;
+		numberOfRunningTasks = 1;
+		currentPriority = 0;
+		currentRunningTask = -1;
+	}
+}
+#endif /* TASK_WATCHDOG_ENABLE */
+
 /**
  * returns the task that is active and has the highest priority
  * @return a number in the task_mem array or -1 if no task is active
@@ -141,6 +177,8 @@ static inline int8_t getNextTaskNumber()
 	}
 	return maxPrioTask;
 }
+
+#include <stdio.h>
 
 #ifdef NEWSCHEDULER
 void scheduler()
@@ -197,7 +235,18 @@ void scheduler()
 					}
 				}
 			}
-		}
+#ifdef TASK_WATCHDOG_ENABLE
+			if (0 == watchdogCounter)
+			{
+				printf("Watchdog triggered\n");
+				resetRSOSTasks();
+			}
+			else
+			{
+				watchdogCounter -= 1;
+			}
+#endif /* TASK_WATCHDOG_ENABLE */
+		}	// end for loop
 
 		schedulerExited();
 		schedulerWait();

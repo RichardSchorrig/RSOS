@@ -25,6 +25,8 @@
 #define STRADEGY_NOWAIT
 #define NEWSCHEDULER
 #define STRADEGY_NOBREAK_ONDELAY
+#define TASK_WATCHDOG_ENABLE
+#define TASK_WATCHDOG_COUNTER 15
 
 #include <RSOSDefines.h>
 
@@ -149,6 +151,17 @@ extern uint8_t currentPriority;
  * shows the number of currently active tasks
  */
 extern uint8_t numberOfRunningTasks;
+
+/**
+ * Initialize the watchdog functionality.
+ * This function must not be called if the watchdog function is not needed and the flag is not defined.
+ * (Flag TASK_WATCHDOG_ENABLE)
+ * Otherwise it must be called. One Task structure is needed, consider one extra in your RSOSDefines.
+ *
+ * !Important! This function must be the first to be called, before adding any other Tasks!
+ */
+__EXTERN_C
+void Task_initOperation();
 
 /**
  * adds a task to the task array
