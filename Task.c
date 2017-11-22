@@ -113,31 +113,44 @@ static inline void unscheduleTask(Task* task)
  * returns the task that is active and has the highest priority
  * @return a number in the task_mem array or -1 if no task is active
  */
-static inline int8_t getNextTaskNumber() __attribute__((always_inline));
-static inline int8_t getNextTaskNumber()
+//static inline int8_t getNextTaskNumber() __attribute__((always_inline));
+static int8_t getNextTaskNumber()
 {
-	int8_t i;
+	static int8_t position = 0;
+	int8_t i = tasks_size;
 	int8_t maxPrioTask = -1;
 	numberOfRunningTasks = 0;
-	for (i=tasks_size; i>0; i-=1)
-	{
-		if (task_mem[i-1].status & Task_isActive)
-		{
-		    numberOfRunningTasks += 1;
 
-			int8_t prio = task_mem[i-1].status & priorityMask;
+	position += 1;
+	if (position >= tasks_size)
+	{
+		position = 0;
+	}
+
+	while (i > 0)
+	{
+		if (0 == position)
+		{
+			position = tasks_size;
+		}
+		position -= 1;
+		if (task_mem[position].status & Task_isActive)
+		{
+		    numberOfRunningTasks += 1;	//Todo: move increment / decrement to schedule and unschedule functions again
+
+			int8_t prio = task_mem[position].status & priorityMask;
 			if ( (prio) >= currentPriority)
 			{
+				currentPriority = prio;
 #ifdef STRADEGY_NOBREAK_ONDELAY
-				if (! (task_mem[i-1].currentDelay & Task_isDelayed) )
+				if (! (task_mem[position].currentDelay & Task_isDelayed) )
 #endif /* STRADEGY_NOBREAK_ONDELAY */
 				{
-					maxPrioTask = i-1;
+					maxPrioTask = position;
 				}
-				currentPriority = prio;
 			}
-
 		}
+		i -= 1;
 	}
 	return maxPrioTask;
 }
