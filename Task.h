@@ -25,8 +25,6 @@
 #define STRADEGY_NOWAIT
 #define NEWSCHEDULER
 #define STRADEGY_NOBREAK_ONDELAY
-#define TASK_WATCHDOG_ENABLE
-#define TASK_WATCHDOG_COUNTER 15
 
 #include <RSOSDefines.h>
 
@@ -152,6 +150,19 @@ extern uint8_t currentPriority;
  */
 extern uint8_t numberOfRunningTasks;
 
+#ifdef TASK_WATCHDOG_ENABLE
+/**
+ * the watchdog task
+ */
+extern Task* task_Watchdog;
+
+/**
+ * counter to be decremented by scheduler wake ISR,
+ * reset by watchdog
+ */
+extern uint8_t watchdogCounter;
+#endif /* TASK_WATCHDOG_ENABLE */
+
 /**
  * Initialize the watchdog functionality.
  * This function must not be called if the watchdog function is not needed and the flag is not defined.
@@ -255,6 +266,25 @@ static inline void Task_resetDelayState()
 }
 
 /**
+ * unschedules all tasks, sets the priority to 0
+ * is called when the watchdog triggers.
+ */
+#ifdef TASK_WATCHDOG_ENABLE
+static inline void resetRSOSTasks() __attribute__((always_inline));
+static inline void resetRSOSTasks()
+{
+	int8_t i;
+	for (i=tasks_size; i>0; i-=1)	// skip task nr 0, this is the watchdog
+	{
+		task_mem[i-1].status &= ~Task_isActive;
+	}
+	numberOfRunningTasks = 0;
+	currentPriority = 0;
+	currentRunningTask = -1;
+}
+#endif /* TASK_WATCHDOG_ENABLE */
+
+/**
  * sets a task active, it is executed when the scheduler is working
  * This function disables and enables all interrupts within execution
  * @param task: pointer to the task that should be scheduled
@@ -292,6 +322,34 @@ void enableScheduler();
  */
 __EXTERN_C
 void disableScheduler();
+
+
+#include <stdio.h>
+/**
+ * This function should be called by the ISR that wakes the scheduler.
+ * In this function,
+ * - the delay state of all tasks are cleared and
+ * - the watchdog task is scheduled, if the watchdog functionality is enabled.
+ */
+static inline void Task_WakeISR() __attribute__((always_inline));
+static inline void Task_WakeISR()
+{
+	Task_resetDelayState();
+
+#ifdef TASK_WATCHDOG_ENABLE
+	scheduleTask(task_Watchdog);
+	if (0 == watchdogCounter)
+	{
+		printf("Watchdog triggered\n");
+		resetRSOSTasks();
+		watchdogCounter = TASK_WATCHDOG_COUNTER;
+	}
+	else
+	{
+		watchdogCounter -= 1;
+	}
+#endif /* TASK_WATCHDOG_ENABLE */
+}
 
 /**
  * the scheduler handles the tasks. they are currently executed in reverse order they where added.
