@@ -7,8 +7,6 @@
 
 #include "Task.h"
 
-#include <HardwareAdaptionLayer.h>
-
 #define MAX_NR_OF_FOLLOWUP_TASKS 7
 
 static int8_t task_schedulerEnabled = 0;

@@ -27,6 +27,7 @@
 #define STRADEGY_NOBREAK_ONDELAY
 
 #include <RSOSDefines.h>
+#include <HardwareAdaptionLayer.h>
 
 #include <stdint.h>
 
@@ -323,8 +324,6 @@ void enableScheduler();
 __EXTERN_C
 void disableScheduler();
 
-
-#include <stdio.h>
 /**
  * This function should be called by the ISR that wakes the scheduler.
  * In this function,
@@ -340,7 +339,7 @@ static inline void Task_WakeISR()
 	scheduleTask(task_Watchdog);
 	if (0 == watchdogCounter)
 	{
-		printf("Watchdog triggered\n");
+	    watchdogTriggered();
 		resetRSOSTasks();
 		watchdogCounter = TASK_WATCHDOG_COUNTER;
 	}
